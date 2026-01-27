@@ -33,7 +33,7 @@ async function listar(req, res, next) {
 
 async function criar(req, res, next) {
   try {
-    const { nome, matricula, posto, cpf, perfil } = req.body;
+    const { nome, matricula, posto, cpf, perfil, senha } = req.body;
 
     const erros = [];
 
@@ -55,6 +55,10 @@ async function criar(req, res, next) {
 
     if (!perfil || !['ADMIN', 'EDITOR', 'LEITOR'].includes(perfil)) {
       erros.push('Selecione um tipo de perfil válido.');
+    }
+
+    if (!senha || senha.length < 4) {
+      erros.push('Informe uma senha com pelo menos 4 caracteres.');
     }
 
     if (erros.length) {
@@ -67,6 +71,7 @@ async function criar(req, res, next) {
       posto,
       cpf: cpfDigits,
       perfil,
+      senha,
     });
 
     res.status(201).json(usuarioCriado);
@@ -78,7 +83,7 @@ async function criar(req, res, next) {
 async function atualizar(req, res, next) {
   try {
     const { id } = req.params;
-    const { nome, matricula, posto, cpf, perfil } = req.body;
+    const { nome, matricula, posto, cpf, perfil, senha } = req.body;
 
     const erros = [];
 
@@ -102,6 +107,10 @@ async function atualizar(req, res, next) {
       erros.push('Selecione um tipo de perfil válido.');
     }
 
+    if (!senha || senha.length < 4) {
+      erros.push('Informe uma senha com pelo menos 4 caracteres.');
+    }
+
     if (erros.length) {
       return res.status(400).json({ message: erros[0] });
     }
@@ -112,6 +121,7 @@ async function atualizar(req, res, next) {
       posto,
       cpf: cpfDigits,
       perfil,
+      senha,
     });
 
     res.json(usuarioAtualizado);
@@ -130,9 +140,38 @@ async function excluir(req, res, next) {
   }
 }
 
+async function alterarSenha(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { senhaAtual, novaSenha } = req.body;
+
+    if (!senhaAtual || !novaSenha) {
+      return res
+        .status(400)
+        .json({ message: 'Informe a senha atual e a nova senha.' });
+    }
+
+    if (novaSenha.length < 4) {
+      return res
+        .status(400)
+        .json({ message: 'Nova senha deve ter pelo menos 4 caracteres.' });
+    }
+
+    await usuarioService.alterarSenha(id, senhaAtual, novaSenha);
+
+    res.json({ message: 'Senha alterada com sucesso.' });
+  } catch (error) {
+    if (error.status === 401) {
+      return res.status(401).json({ message: 'Senha não confere.' });
+    }
+    next(error);
+  }
+}
+
 module.exports = {
   listar,
   criar,
   atualizar,
   excluir,
+  alterarSenha,
 };

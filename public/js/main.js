@@ -12,24 +12,43 @@ const showToast = (message) => {
 };
 
 if (loginForm) {
-  loginForm.addEventListener('submit', (e) => {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const matricula = document.getElementById('matricula')?.value || '';
     const password = document.getElementById('password')?.value || '';
 
-    if (matricula === '99999999' && password === '123456') {
+    if (!matricula || !password) {
+      showToast('Informe matrícula e senha.');
+      return;
+    }
+
+    try {
+      const resposta = await fetch('/api/v1/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ matricula, senha: password }),
+      });
+
+      const data = await resposta.json().catch(() => null);
+
+      if (!resposta.ok) {
+        showToast(data?.message || 'Matrícula ou senha incorretos.');
+        return;
+      }
+
       try {
-        localStorage.setItem(
-          'sgv_usuario_logado',
-          JSON.stringify({ matricula, perfil: 'ADMIN' })
-        );
+        localStorage.setItem('sgv_usuario_logado', JSON.stringify(data));
       } catch (e) {
         // se localStorage não estiver disponível, apenas segue
       }
+
       window.location.href = '/home.html';
-    } else {
-      showToast('Matrícula ou senha incorretos.');
+    } catch (error) {
+      console.error(error);
+      showToast('Erro ao tentar fazer login.');
     }
   });
 }
@@ -42,6 +61,126 @@ if (menuItems && menuItems.length) {
       menuItems.forEach((i) => i.classList.remove('active'));
       item.classList.add('active');
     });
+  });
+}
+
+// Exibir nome do usuário logado na home (se existir)
+const topbarUserName = document.getElementById('topbar-user-name');
+if (topbarUserName) {
+  const usuarioLogado = getUsuarioLogado();
+  if (usuarioLogado?.nome) {
+    topbarUserName.textContent = usuarioLogado.nome;
+  }
+}
+
+// Modal de dados do usuário e alteração de senha
+const userModal = document.getElementById('user-modal');
+const userModalClose = document.getElementById('user-modal-close');
+const changePasswordForm = document.getElementById('change-password-form');
+
+if (topbarUserName && userModal) {
+  const usuarioLogado = getUsuarioLogado();
+
+  const openModal = () => {
+    if (!usuarioLogado) return;
+
+    const perfilLabel =
+      usuarioLogado.perfil === 'ADMIN'
+        ? 'Administrador'
+        : usuarioLogado.perfil === 'EDITOR'
+        ? 'Editor'
+        : 'Leitor';
+
+    document.getElementById('modal-user-nome').textContent =
+      usuarioLogado.nome || '-';
+    document.getElementById('modal-user-matricula').textContent =
+      usuarioLogado.matricula || '-';
+    document.getElementById('modal-user-posto').textContent =
+      usuarioLogado.posto || '-';
+    document.getElementById('modal-user-perfil').textContent = perfilLabel;
+
+    const msg = document.getElementById('change-password-message');
+    if (msg) msg.textContent = '';
+    const current = document.getElementById('current-password');
+    const next = document.getElementById('new-password');
+    if (current) current.value = '';
+    if (next) next.value = '';
+
+    userModal.style.display = 'flex';
+  };
+
+  const closeModal = () => {
+    userModal.style.display = 'none';
+  };
+
+  topbarUserName.style.cursor = 'pointer';
+  topbarUserName.addEventListener('click', openModal);
+
+  if (userModalClose) {
+    userModalClose.addEventListener('click', closeModal);
+  }
+
+  userModal.addEventListener('click', (e) => {
+    if (e.target === userModal) closeModal();
+  });
+}
+
+if (changePasswordForm) {
+  changePasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const usuarioLogado = getUsuarioLogado();
+    const msgEl = document.getElementById('change-password-message');
+
+    if (!usuarioLogado?.id) {
+      if (msgEl) {
+        msgEl.textContent = 'Usuário não identificado.';
+        msgEl.style.color = '#e74c3c';
+      }
+      return;
+    }
+
+    const senhaAtual = document.getElementById('current-password').value;
+    const novaSenha = document.getElementById('new-password').value;
+
+    if (!senhaAtual || !novaSenha) {
+      if (msgEl) {
+        msgEl.textContent = 'Preencha a senha atual e a nova senha.';
+        msgEl.style.color = '#e74c3c';
+      }
+      return;
+    }
+
+    try {
+      const resposta = await fetch(`/api/v1/usuarios/${usuarioLogado.id}/senha`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ senhaAtual, novaSenha }),
+      });
+
+      const data = await resposta.json().catch(() => null);
+
+      if (!resposta.ok) {
+        if (msgEl) {
+          msgEl.textContent = data?.message || 'Senha não confere.';
+          msgEl.style.color = '#e74c3c';
+        }
+        return;
+      }
+
+      if (msgEl) {
+        msgEl.textContent = 'Senha alterada com sucesso.';
+        msgEl.style.color = '#2ecc71';
+      }
+    } catch (error) {
+      console.error(error);
+      if (msgEl) {
+        msgEl.textContent = 'Erro ao alterar a senha.';
+        msgEl.style.color = '#e74c3c';
+      }
+    }
   });
 }
 
@@ -244,6 +383,7 @@ if (userForm) {
     const posto = document.getElementById('user-posto').value.trim();
     const cpf = apenasDigitos(document.getElementById('user-cpf').value.trim());
     const perfil = document.getElementById('user-perfil').value;
+      const senha = document.getElementById('user-senha').value;
 
     const erros = [];
 
@@ -263,13 +403,17 @@ if (userForm) {
 
     if (!perfil) erros.push('Selecione o tipo de perfil.');
 
+      if (!senha || senha.length < 4) {
+        erros.push('Informe uma senha com pelo menos 4 caracteres.');
+      }
+
     if (erros.length) {
       msgEl.textContent = erros[0];
       msgEl.style.color = '#e74c3c';
       return;
     }
 
-    const payload = { nome, matricula, posto, cpf, perfil };
+      const payload = { nome, matricula, posto, cpf, perfil, senha };
 
     // se estiver editando, faz PUT, senão POST
     if (indiceEdicao !== null && usuarios[indiceEdicao]) {

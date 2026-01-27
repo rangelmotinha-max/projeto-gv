@@ -5,6 +5,7 @@ const logger = require('./middlewares/logger');
 const errorHandler = require('./middlewares/errorHandler');
 const healthRoutes = require('./routes/healthRoutes');
 const usuarioRoutes = require('./routes/usuarioRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Rotas versionadas
 app.use('/api/v1', healthRoutes);
 app.use('/api/v1', usuarioRoutes);
+app.use('/api/v1', authRoutes);
 
 // Fallback simples para rotas não encontradas
 app.use((req, res, next) => {

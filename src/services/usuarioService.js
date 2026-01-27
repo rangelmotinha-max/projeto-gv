@@ -18,10 +18,10 @@ async function listarUsuarios() {
   }));
 }
 
-async function criarUsuario({ nome, matricula, posto, cpf, perfil }) {
+async function criarUsuario({ nome, matricula, posto, cpf, perfil, senha }) {
   const sql =
-    'INSERT INTO usuarios (nome_completo, matricula, posto_graduacao, cpf, perfil) VALUES (?, ?, ?, ?, ?)';
-  const params = [nome, matricula, posto, cpf, perfil];
+    'INSERT INTO usuarios (nome_completo, matricula, posto_graduacao, cpf, perfil, senha) VALUES (?, ?, ?, ?, ?, ?)';
+  const params = [nome, matricula, posto, cpf, perfil, senha];
 
   const [result] = await db.execute(sql, params);
 
@@ -36,10 +36,10 @@ async function criarUsuario({ nome, matricula, posto, cpf, perfil }) {
   };
 }
 
-async function atualizarUsuario(id, { nome, matricula, posto, cpf, perfil }) {
+async function atualizarUsuario(id, { nome, matricula, posto, cpf, perfil, senha }) {
   const sql =
-    'UPDATE usuarios SET nome_completo = ?, matricula = ?, posto_graduacao = ?, cpf = ?, perfil = ? WHERE id = ?';
-  const params = [nome, matricula, posto, cpf, perfil, id];
+    'UPDATE usuarios SET nome_completo = ?, matricula = ?, posto_graduacao = ?, cpf = ?, perfil = ?, senha = ? WHERE id = ?';
+  const params = [nome, matricula, posto, cpf, perfil, senha, id];
 
   await db.execute(sql, params);
 
@@ -60,9 +60,33 @@ async function excluirUsuario(id) {
   await db.execute(sql, params);
 }
 
+async function alterarSenha(id, senhaAtual, novaSenha) {
+  const [rows] = await db.execute(
+    'SELECT senha FROM usuarios WHERE id = ? LIMIT 1',
+    [id]
+  );
+
+  if (!rows.length) {
+    const error = new Error('Usuário não encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  const senhaBanco = rows[0].senha || '';
+
+  if (senhaBanco !== senhaAtual) {
+    const error = new Error('Senha atual não confere');
+    error.status = 401;
+    throw error;
+  }
+
+  await db.execute('UPDATE usuarios SET senha = ? WHERE id = ?', [novaSenha, id]);
+}
+
 module.exports = {
   listarUsuarios,
   criarUsuario,
   atualizarUsuario,
   excluirUsuario,
+  alterarSenha,
 };
