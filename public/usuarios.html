@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro de Usuários | Sistema de Gestão de Viaturas</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body class="dashboard-body">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <i class="fa-solid fa-gears"></i>
+          </div>
+          <div class="sidebar-title">
+            <span class="system-name">SGV</span>
+            <small>Sistema de Gestão de Viaturas</small>
+          </div>
+        </div>
+        <nav class="sidebar-menu">
+          <a href="/home.html" class="menu-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+          </a>
+          <a href="/usuarios.html" class="menu-item active">
+            <i class="fa-solid fa-users"></i>
+            <span>Usuários</span>
+          </a>
+          <a href="#" class="menu-item">
+            <i class="fa-solid fa-id-card"></i>
+            <span>Cadastro</span>
+          </a>
+          <a href="#" class="menu-item">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Consulta</span>
+          </a>
+          <a href="#" class="menu-item">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Relatório</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <h1 class="topbar-title">Cadastro de Usuários</h1>
+          <div class="topbar-right">
+            <span class="user-name">Administrador</span>
+          </div>
+        </header>
+
+        <section class="form-card">
+          <h2 class="section-title">Dados do usuário</h2>
+          <form id="user-form">
+            <div class="form-row">
+              <div class="form-field full-width">
+                <label for="user-name">Nome Completo:</label>
+                <input type="text" id="user-name" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="user-matricula">Matrícula:</label>
+                <input
+                  type="text"
+                  id="user-matricula"
+                  maxlength="8"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label for="user-posto">Posto/Graduação:</label>
+                <input type="text" id="user-posto" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="user-cpf">CPF:</label>
+                <input
+                  type="text"
+                  id="user-cpf"
+                  maxlength="11"
+                  inputmode="numeric"
+                  required
+                />
+              </div>
+              <div class="form-field">
+                <label for="user-perfil">Tipo de Perfil:</label>
+                <select id="user-perfil" required>
+                  <option value="">Selecione</option>
+                  <option value="ADMIN">Administrador</option>
+                  <option value="EDITOR">Editor</option>
+                  <option value="LEITOR">Leitor</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="user-form-message" class="form-message"></div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Incluir</button>
+              <button type="button" id="btn-listar" class="btn-outline">Listar</button>
+              <button type="button" id="btn-limpar" class="btn-secondary">Limpar</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="section-block" id="user-list-section" style="margin-top: 16px; display: none;">
+          <h2 class="section-title">Usuários cadastrados</h2>
+          <div id="user-list-container"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/main.js"></script>
+  </body>
+</html>

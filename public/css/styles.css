@@ -95,6 +95,15 @@ body.auth-body {
   color: #495057;
 }
 
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  color: #495057;
+  background-color: #ffffff;
+}
+
 .form-options {
   margin-bottom: 25px;
 }
@@ -112,7 +121,6 @@ body.auth-body {
 }
 
 .btn-primary {
-  width: 100%;
   padding: 12px;
   background-color: #485ec4;
   color: #ffffff;
@@ -125,6 +133,34 @@ body.auth-body {
 
 .btn-primary:hover {
   background-color: #3a4ca1;
+}
+
+.btn-secondary,
+.btn-outline {
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: #ffffff;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border-color: #485ec4;
+  color: #485ec4;
+}
+
+.btn-outline:hover {
+  background-color: #eef1ff;
 }
 
 .forgot-password {
@@ -308,4 +344,99 @@ body.dashboard-body {
   font-size: 14px;
   color: #6c757d;
   margin-bottom: 6px;
+}
+
+/* Formulário de cadastro de usuários */
+
+.form-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  padding: 18px 20px 22px 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.form-field {
+  flex: 1;
+}
+
+.form-field.full-width {
+  flex: 0 0 100%;
+}
+
+.form-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 6px;
+}
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  color: #495057;
+}
+
+.form-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.form-actions .btn-primary {
+  font-size: 14px;
+  padding: 10px 14px;
+}
+
+.form-message {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #e74c3c;
+}
+
+/* Tabela de usuários cadastrados */
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.user-table thead {
+  background-color: #f5f6fb;
+}
+
+.user-table th,
+.user-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #edf0f5;
+  text-align: left;
+}
+
+.user-table th {
+  font-weight: 600;
+  color: #495057;
+}
+
+.user-actions button {
+  border: none;
+  background: transparent;
+  color: #485ec4;
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.user-actions button.delete {
+  color: #e74c3c;
 }
