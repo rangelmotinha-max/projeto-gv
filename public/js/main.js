@@ -94,6 +94,7 @@ const userModalClose = document.getElementById('user-modal-close');
 const passwordModal = document.getElementById('password-modal');
 const passwordModalClose = document.getElementById('password-modal-close');
 const linkAlterarSenha = document.getElementById('link-alterar-senha');
+const btnLogout = document.getElementById('btn-logout');
 const changePasswordForm = document.getElementById('change-password-form');
 
 if (topbarUserName && userModal) {
@@ -133,6 +134,19 @@ if (topbarUserName && userModal) {
 
   userModal.addEventListener('click', (e) => {
     if (e.target === userModal) closeModal();
+  });
+}
+
+// botão de sair (logout)
+if (btnLogout) {
+  btnLogout.addEventListener('click', () => {
+    try {
+      localStorage.removeItem('sgv_usuario_logado');
+    } catch (e) {
+      // se localStorage não estiver disponível, apenas segue
+    }
+
+    window.location.href = '/index.html';
   });
 }
 
