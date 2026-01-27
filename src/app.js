@@ -1,0 +1,30 @@
+// Configuração principal do Express
+const express = require('express');
+const path = require('path');
+const logger = require('./middlewares/logger');
+const errorHandler = require('./middlewares/errorHandler');
+const healthRoutes = require('./routes/healthRoutes');
+
+const app = express();
+
+// Middlewares globais
+app.use(express.json());
+app.use(logger);
+
+// Arquivos estáticos do frontend
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Rotas versionadas
+app.use('/api/v1', healthRoutes);
+
+// Fallback simples para rotas não encontradas
+app.use((req, res, next) => {
+  const error = new Error('Rota não encontrada');
+  error.status = 404;
+  next(error);
+});
+
+// Tratamento centralizado de erros
+app.use(errorHandler);
+
+module.exports = app;

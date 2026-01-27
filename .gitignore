@@ -1,1 +1,8 @@
+# Dependências
+node_modules/
 
+# Logs
+npm-debug.log*
+
+# Arquivos locais
+.DS_Store

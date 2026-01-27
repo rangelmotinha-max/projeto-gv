@@ -1,0 +1,75 @@
+/* Estilos base do layout */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.header {
+  background: #1f2937;
+  color: #ffffff;
+  padding: 24px;
+}
+
+.header h1 {
+  margin-bottom: 12px;
+}
+
+.menu a {
+  color: #ffffff;
+  margin-right: 12px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.container {
+  max-width: 900px;
+  margin: 32px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.btn {
+  margin-top: 16px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn:hover {
+  background: #1d4ed8;
+}
+
+.resultado {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  min-height: 24px;
+}
+
+.resultado.sucesso {
+  border: 1px solid #22c55e;
+  color: #166534;
+}
+
+.resultado.erro {
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
