@@ -493,3 +493,18 @@ body.dashboard-body {
 .user-actions button.delete {
   color: #e74c3c;
 }
+
+/* ===== Cores de status (veículos) ===== */
+.status-base {
+  color: #000000;
+  font-weight: 700;
+}
+.status-baixada {
+  color: #ff8c00; /* laranja */
+}
+.status-oficina {
+  color: #e74c3c; /* vermelho */
+}
+.status-ativa {
+  color: #2ecc71; /* verde */
+}

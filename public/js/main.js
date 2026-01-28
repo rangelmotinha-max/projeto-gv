@@ -34,6 +34,14 @@ if (forgotPasswordLink && forgotPasswordModal) {
     return reAntiga.test(p) || reMercosul.test(p);
   };
 
+  const getStatusView = (code) => {
+    const c = String(code || '').toUpperCase();
+    if (c === 'BAIXADA') return { label: 'Baixada', cls: 'status-baixada' };
+    if (c === 'OFICINA') return { label: 'Oficina', cls: 'status-oficina' };
+    if (c === 'ATIVA') return { label: 'Ativa', cls: 'status-ativa' };
+    return { label: 'Base', cls: 'status-base' };
+  };
+
   const carregar = async () => {
     try {
       const res = await fetch('/api/v1/veiculos');
@@ -53,12 +61,14 @@ if (forgotPasswordLink && forgotPasswordModal) {
       return;
     }
 
-    const linhas = veiculos.map((v, i) => `
+    const linhas = veiculos.map((v, i) => {
+      const sv = getStatusView(v.status);
+      return `
       <tr>
         <td>${v.placa}</td>
         <td>${v.marcaModelo} (${v.anoFabricacao})</td>
         <td>${v.unidade}</td>
-        <td>${v.status}</td>
+        <td><span class="${sv.cls}">${sv.label}</span></td>
         <td>
           ${v.manualPath ? `<a href="${v.manualPath}" target="_blank">Manual</a>` : '<span style="color:#6c757d;">-</span>'}
           <div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
@@ -71,7 +81,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
           <button type="button" class="delete" data-index="${i}">Excluir</button>
         </td>
       </tr>
-    `).join('');
+    `}).join('');
 
     listContainer.innerHTML = `
       <table class="user-table">
