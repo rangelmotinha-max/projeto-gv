@@ -12,6 +12,217 @@ if (forgotPasswordLink && forgotPasswordModal) {
   });
 }
 
+// ===== Cadastro de Veículo: salvar, listar, editar e excluir =====
+(() => {
+  const form = document.getElementById('vehicle-form');
+  const listSection = document.getElementById('vehicle-list-section');
+  const listContainer = document.getElementById('vehicle-list-container');
+  const btnListar = document.getElementById('veh-btn-listar');
+  const msgEl = document.getElementById('vehicle-form-message');
+  const btnLimpar = document.getElementById('veh-btn-limpar');
+
+  if (!form) return; // só executa na página cadastro.html
+
+  let veiculos = [];
+  let editId = null; // id do veículo em edição
+
+  const toDigits = (v = '') => v.replace(/\D/g, '');
+  const validarPlacaBR = (placa) => {
+    const p = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const reAntiga = /^[A-Z]{3}\d{4}$/; // ABC1234
+    const reMercosul = /^[A-Z]{3}\d[A-Z]\d{2}$/; // ABC1D23
+    return reAntiga.test(p) || reMercosul.test(p);
+  };
+
+  const carregar = async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      veiculos = await res.json();
+    } catch (e) {
+      console.error(e);
+      veiculos = [];
+    }
+  };
+
+  const render = () => {
+    if (!listContainer || !listSection) return;
+    if (!veiculos.length) {
+      listContainer.innerHTML = '<p style="font-size:14px;color:#6c757d;">Nenhum veículo cadastrado.</p>';
+      listSection.style.display = 'block';
+      return;
+    }
+
+    const linhas = veiculos.map((v, i) => `
+      <tr>
+        <td>${v.placa}</td>
+        <td>${v.marcaModelo} (${v.anoFabricacao})</td>
+        <td>${v.unidade}</td>
+        <td>${v.status}</td>
+        <td class="user-actions">
+          <button type="button" class="edit" data-index="${i}">Editar</button>
+          <button type="button" class="delete" data-index="${i}">Excluir</button>
+        </td>
+      </tr>
+    `).join('');
+
+    listContainer.innerHTML = `
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>Placa</th>
+            <th>Veículo</th>
+            <th>Unidade</th>
+            <th>Status</th>
+            <th style="width:120px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    `;
+
+    listSection.style.display = 'block';
+
+    // Excluir
+    listContainer.querySelectorAll('button.delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const idx = Number(btn.getAttribute('data-index'));
+        const v = veiculos[idx];
+        if (!v) return;
+        if (!window.confirm('Deseja realmente excluir este veículo?')) return;
+        try {
+          const res = await fetch(`/api/v1/veiculos/${v.id}` , { method: 'DELETE' });
+          if (!res.ok) throw new Error('Erro ao excluir');
+          await carregar();
+          render();
+        } catch (e) {
+          console.error(e);
+          window.alert('Erro ao excluir veículo');
+        }
+      });
+    });
+
+    // Editar
+    listContainer.querySelectorAll('button.edit').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.getAttribute('data-index'));
+        const v = veiculos[idx];
+        if (!v) return;
+
+        document.getElementById('veic-marca-modelo').value = v.marcaModelo || '';
+        document.getElementById('veic-ano').value = v.anoFabricacao || '';
+        document.getElementById('veic-prefixo').value = v.prefixo || '';
+        document.getElementById('veic-placa').value = v.placa || '';
+        document.getElementById('veic-placa-vinculada').value = v.placaVinculada || '';
+        document.getElementById('veic-unidade').value = v.unidade || '';
+        document.getElementById('veic-km-atual').value = v.kmAtual ?? '';
+        document.getElementById('veic-prox-rev-km').value = v.proximaRevisaoKm ?? '';
+        document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
+        document.getElementById('veic-condutor').value = v.condutorAtual || '';
+        document.getElementById('veic-cartao').value = v.cartao || '';
+        document.getElementById('veic-os-cman').value = v.osCman || '';
+        document.getElementById('veic-os-prime').value = v.osPrime || '';
+        document.getElementById('veic-status').value = v.status || '';
+
+        editId = v.id;
+        form.setAttribute('data-edit-id', String(editId));
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+        if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+      });
+    });
+  };
+
+  // Envio do formulário (POST/PUT)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msgEl) msgEl.textContent = '';
+
+    const marcaModelo = document.getElementById('veic-marca-modelo').value.trim();
+    const anoFabricacao = Number(toDigits(document.getElementById('veic-ano').value));
+    const prefixo = document.getElementById('veic-prefixo').value.trim();
+    const placa = document.getElementById('veic-placa').value.trim().toUpperCase();
+    const placaVinculada = document.getElementById('veic-placa-vinculada').value.trim().toUpperCase();
+    const unidade = document.getElementById('veic-unidade').value.trim();
+    const kmAtual = Number(toDigits(document.getElementById('veic-km-atual').value));
+    const proximaRevisaoKm = Number(toDigits(document.getElementById('veic-prox-rev-km').value));
+    const dataProximaRevisao = document.getElementById('veic-data-prox-rev').value;
+    const condutorAtual = document.getElementById('veic-condutor').value.trim();
+    const cartao = document.getElementById('veic-cartao').value.trim();
+    const osCman = document.getElementById('veic-os-cman').value.trim();
+    const osPrime = document.getElementById('veic-os-prime').value.trim();
+    const status = document.getElementById('veic-status').value;
+
+    const erros = [];
+    if (!marcaModelo) erros.push('Informe Marca/Modelo.');
+    const currentYear = new Date().getFullYear();
+    if (!(anoFabricacao >= 1970 && anoFabricacao <= currentYear + 1)) erros.push('Informe um ano de fabricação válido.');
+    if (!validarPlacaBR(placa)) erros.push('Informe uma placa válida (ABC-1234 ou ABC1D23).');
+    if (placaVinculada && !validarPlacaBR(placaVinculada)) erros.push('Placa vinculada inválida.');
+    if (!unidade) erros.push('Informe a Unidade.');
+    if (!(kmAtual >= 0)) erros.push('Informe Km Atual válido.');
+    if (!(proximaRevisaoKm >= 0)) erros.push('Informe Próxima Revisão Km válido.');
+    if (!status) erros.push('Selecione o Status.');
+    if (erros.length) {
+      if (msgEl) { msgEl.textContent = erros[0]; msgEl.style.color = '#e74c3c'; }
+      return;
+    }
+
+    const payload = {
+      marcaModelo, anoFabricacao, prefixo, placa, placaVinculada, unidade,
+      kmAtual, proximaRevisaoKm, dataProximaRevisao: dataProximaRevisao || null,
+      condutorAtual, cartao, osCman, osPrime, status
+    };
+
+    try {
+      const isEdit = !!editId || !!form.getAttribute('data-edit-id');
+      const idPath = editId || form.getAttribute('data-edit-id');
+      const url = isEdit ? `/api/v1/veiculos/${idPath}` : '/api/v1/veiculos';
+      const method = isEdit ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (msgEl) { msgEl.textContent = data?.message || 'Erro ao salvar.'; msgEl.style.color = '#e74c3c'; }
+        return;
+      }
+
+      if (msgEl) { msgEl.textContent = 'Veículo salvo com sucesso.'; msgEl.style.color = '#2ecc71'; }
+      form.reset();
+      editId = null; form.removeAttribute('data-edit-id');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = 'Salvar';
+      await carregar();
+      render();
+    } catch (e) {
+      if (msgEl) { msgEl.textContent = 'Erro ao comunicar com o servidor.'; msgEl.style.color = '#e74c3c'; }
+    }
+  });
+
+  if (btnLimpar) {
+    btnLimpar.addEventListener('click', () => {
+      form.reset();
+      editId = null; form.removeAttribute('data-edit-id');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = 'Salvar';
+      if (msgEl) msgEl.textContent = '';
+    });
+  }
+
+  if (btnListar) {
+    btnListar.addEventListener('click', async () => {
+      await carregar();
+      render();
+    });
+  }
+
+  // Atualiza a lista após salvamentos feitos em outras lógicas
+  document.addEventListener('vehicle-saved', async () => {
+    await carregar();
+    render();
+  });
+})();
+
+
 if (forgotCancel && forgotPasswordModal) {
   forgotCancel.addEventListener('click', () => {
     forgotPasswordModal.style.display = 'none';
