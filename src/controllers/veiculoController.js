@@ -1,3 +1,4 @@
+const path = require('path');
 const veiculoService = require('../services/veiculoService');
 
 const validarPlacaBR = (placa) => {
@@ -51,6 +52,16 @@ async function criar(req, res, next) {
 
     if (erros.length) return res.status(400).json({ message: erros[0] });
 
+    // Arquivos
+    const files = req.files || {};
+    const manualFile = files.manual?.[0] || null;
+    const fotosFiles = files.fotos || [];
+
+    const manualPath = manualFile
+      ? path.posix.join('/uploads/veiculos', path.basename(manualFile.path))
+      : null;
+    const manualNome = manualFile ? manualFile.originalname : null;
+
     const item = await veiculoService.criar({
       marcaModelo,
       anoFabricacao: ano,
@@ -65,8 +76,20 @@ async function criar(req, res, next) {
       cartao: cartao || null,
       osCman: osCman || null,
       osPrime: osPrime || null,
+      manualPath,
+      manualNome,
       status,
     });
+
+    if (fotosFiles.length) {
+      await veiculoService.inserirFotos(
+        item.id,
+        fotosFiles.map((f) => ({
+          caminho: path.posix.join('/uploads/veiculos', path.basename(f.path)),
+          nome: f.originalname,
+        }))
+      );
+    }
 
     res.status(201).json(item);
   } catch (e) {
@@ -90,6 +113,15 @@ async function atualizar(req, res, next) {
     };
     await criar(mockReq, mockRes, next);
 
+    const files = req.files || {};
+    const manualFile = files.manual?.[0] || null;
+    const fotosFiles = files.fotos || [];
+
+    const manualPath = manualFile
+      ? path.posix.join('/uploads/veiculos', path.basename(manualFile.path))
+      : undefined;
+    const manualNome = manualFile ? manualFile.originalname : undefined;
+
     const atualizado = await veiculoService.atualizar(id, {
       marcaModelo: payload.marcaModelo,
       anoFabricacao: Number(payload.anoFabricacao),
@@ -105,7 +137,19 @@ async function atualizar(req, res, next) {
       osCman: payload.osCman || null,
       osPrime: payload.osPrime || null,
       status: payload.status,
+      manualPath,
+      manualNome,
     });
+
+    if (fotosFiles.length) {
+      await veiculoService.inserirFotos(
+        id,
+        fotosFiles.map((f) => ({
+          caminho: path.posix.join('/uploads/veiculos', path.basename(f.path)),
+          nome: f.originalname,
+        }))
+      );
+    }
 
     res.json(atualizado);
   } catch (e) {

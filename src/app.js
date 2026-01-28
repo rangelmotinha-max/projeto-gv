@@ -17,6 +17,9 @@ app.use(logger);
 // Arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Servir arquivos enviados (fotos e manuais)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Rotas versionadas
 app.use('/api/v1', healthRoutes);
 app.use('/api/v1', usuarioRoutes);

@@ -59,6 +59,13 @@ if (forgotPasswordLink && forgotPasswordModal) {
         <td>${v.marcaModelo} (${v.anoFabricacao})</td>
         <td>${v.unidade}</td>
         <td>${v.status}</td>
+        <td>
+          ${v.manualPath ? `<a href="${v.manualPath}" target="_blank">Manual</a>` : '<span style="color:#6c757d;">-</span>'}
+          <div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
+            ${(v.fotos || []).slice(0,3).map(f => `<img src="${f.url}" alt="${f.nome}" style="width:46px;height:34px;object-fit:cover;border-radius:4px;border:1px solid #edf0f5;"/>`).join('')}
+            ${(v.fotos && v.fotos.length > 3) ? `<span style="font-size:12px;color:#6c757d;">+${v.fotos.length - 3}</span>` : ''}
+          </div>
+        </td>
         <td class="user-actions">
           <button type="button" class="edit" data-index="${i}">Editar</button>
           <button type="button" class="delete" data-index="${i}">Excluir</button>
@@ -74,6 +81,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
             <th>Veículo</th>
             <th>Unidade</th>
             <th>Status</th>
+            <th>Anexos</th>
             <th style="width:120px;">Ações</th>
           </tr>
         </thead>
@@ -133,7 +141,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     });
   };
 
-  // Envio do formulário (POST/PUT)
+  // Envio do formulário (POST/PUT) com arquivos (FormData)
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (msgEl) msgEl.textContent = '';
@@ -168,18 +176,37 @@ if (forgotPasswordLink && forgotPasswordModal) {
       return;
     }
 
-    const payload = {
-      marcaModelo, anoFabricacao, prefixo, placa, placaVinculada, unidade,
-      kmAtual, proximaRevisaoKm, dataProximaRevisao: dataProximaRevisao || null,
-      condutorAtual, cartao, osCman, osPrime, status
-    };
+    const fd = new FormData();
+    fd.append('marcaModelo', marcaModelo);
+    fd.append('anoFabricacao', String(anoFabricacao));
+    fd.append('prefixo', prefixo);
+    fd.append('placa', placa);
+    fd.append('placaVinculada', placaVinculada);
+    fd.append('unidade', unidade);
+    fd.append('kmAtual', String(kmAtual));
+    fd.append('proximaRevisaoKm', String(proximaRevisaoKm));
+    if (dataProximaRevisao) fd.append('dataProximaRevisao', dataProximaRevisao);
+    fd.append('condutorAtual', condutorAtual);
+    fd.append('cartao', cartao);
+    fd.append('osCman', osCman);
+    fd.append('osPrime', osPrime);
+    fd.append('status', status);
+
+    const fotosInput = document.getElementById('veic-fotos');
+    const manualInput = document.getElementById('veic-manual');
+    if (fotosInput && fotosInput.files) {
+      Array.from(fotosInput.files).forEach((file) => fd.append('fotos', file));
+    }
+    if (manualInput && manualInput.files && manualInput.files[0]) {
+      fd.append('manual', manualInput.files[0]);
+    }
 
     try {
       const isEdit = !!editId || !!form.getAttribute('data-edit-id');
       const idPath = editId || form.getAttribute('data-edit-id');
       const url = isEdit ? `/api/v1/veiculos/${idPath}` : '/api/v1/veiculos';
       const method = isEdit ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(url, { method, body: fd });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         if (msgEl) { msgEl.textContent = data?.message || 'Erro ao salvar.'; msgEl.style.color = '#e74c3c'; }
