@@ -65,17 +65,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       const sv = getStatusView(v.status);
       return `
       <tr>
-        <td>${v.placa}</td>
+        <td>${v.placaVinculada || '-'}</td>
         <td>${v.marcaModelo} (${v.anoFabricacao})</td>
-        <td>${v.unidade}</td>
+        <td>${v.condutorAtual || '-'}</td>
         <td><span class="${sv.cls}">${sv.label}</span></td>
-        <td>
-          ${v.manualPath ? `<a href="${v.manualPath}" target="_blank">Manual</a>` : '<span style="color:#6c757d;">-</span>'}
-          <div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
-            ${(v.fotos || []).slice(0,3).map(f => `<img src="${f.url}" alt="${f.nome}" style="width:46px;height:34px;object-fit:cover;border-radius:4px;border:1px solid #edf0f5;"/>`).join('')}
-            ${(v.fotos && v.fotos.length > 3) ? `<span style="font-size:12px;color:#6c757d;">+${v.fotos.length - 3}</span>` : ''}
-          </div>
-        </td>
         <td class="user-actions">
           <button type="button" class="edit" data-index="${i}">Editar</button>
           <button type="button" class="delete" data-index="${i}">Excluir</button>
@@ -87,11 +80,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       <table class="user-table">
         <thead>
           <tr>
-            <th>Placa</th>
+            <th>Placa Vinculada</th>
             <th>Veículo</th>
-            <th>Unidade</th>
+            <th>Condutor</th>
             <th>Status</th>
-            <th>Anexos</th>
             <th style="width:120px;">Ações</th>
           </tr>
         </thead>
@@ -311,6 +303,40 @@ if (forgotPasswordForm) {
   });
 }
 const apenasDigitos = (valor) => valor.replace(/\D/g, '');
+
+// ===== Métricas da Home (contagem de veículos) =====
+(() => {
+  const elTotal = document.getElementById('metric-total-veiculos');
+  const elBaixados = document.getElementById('metric-veiculos-baixados');
+  const elOficina = document.getElementById('metric-veiculos-oficina');
+  const elBase = document.getElementById('metric-veiculos-base');
+
+  if (!elTotal && !elBaixados && !elOficina && !elBase) return; // não está na home
+
+  const setAll = (t = '-', b = '-', o = '-', ba = '-') => {
+    if (elTotal) elTotal.textContent = t;
+    if (elBaixados) elBaixados.textContent = b;
+    if (elOficina) elOficina.textContent = o;
+    if (elBase) elBase.textContent = ba;
+  };
+
+  (async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      const lista = await res.json();
+
+      const total = Array.isArray(lista) ? lista.length : 0;
+      const baixados = (lista || []).filter(v => String(v.status).toUpperCase() === 'BAIXADA').length;
+      const oficina = (lista || []).filter(v => String(v.status).toUpperCase() === 'OFICINA').length;
+      const base = (lista || []).filter(v => String(v.status).toUpperCase() === 'BASE').length;
+
+      setAll(total, baixados, oficina, base);
+    } catch (e) {
+      setAll('-', '-', '-', '-');
+    }
+  })();
+})();
 
 // Script principal da tela de login
 const loginForm = document.getElementById('login-form');
