@@ -131,6 +131,12 @@ select {
   transition: background 0.2s;
 }
 
+.login-body .btn-primary {
+  display: block;
+  margin: 0 auto;
+  width: fit-content;
+}
+
 .btn-primary:hover {
   background-color: #3a4ca1;
 }
