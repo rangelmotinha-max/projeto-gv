@@ -24,4 +24,9 @@ router.put(
 );
 router.delete('/veiculos/:id', veiculoController.excluir);
 
+// Histórico de KM
+router.post('/veiculos/:id/kms', express.json(), veiculoController.adicionarKm);
+router.get('/veiculos/:id/kms', veiculoController.listarKms);
+router.get('/veiculos/:id/kms/medias', veiculoController.mediasKms);
+
 module.exports = router;

@@ -148,3 +148,90 @@ async function inserirFotos(veiculoId, fotos = []) {
 }
 
 module.exports = { listar, criar, atualizar, excluir, inserirFotos };
+// ===== Histórico de KM =====
+
+async function registrarLeituraKm(veiculoId, km, dataLeitura = null, origem = 'FORM') {
+  // valida progresso do hodômetro
+  const [lastRows] = await db.execute(
+    'SELECT km FROM veiculo_km_historico WHERE veiculo_id = ? ORDER BY data_leitura DESC, id DESC LIMIT 1',
+    [veiculoId]
+  );
+  if (lastRows.length && km < (lastRows[0].km || 0)) {
+    const err = new Error('Km inferior ao último registrado.');
+    err.status = 400;
+    throw err;
+  }
+
+  const sql = 'INSERT INTO veiculo_km_historico (veiculo_id, km, data_leitura, origem) VALUES (?, ?, ?, ?)';
+  const when = dataLeitura ? new Date(dataLeitura) : new Date();
+  const ts = when.toISOString().slice(0, 19).replace('T', ' ');
+  await db.execute(sql, [veiculoId, km, ts, origem]);
+
+  // Atualiza km_atual se maior
+  await db.execute('UPDATE veiculos SET km_atual = ? WHERE id = ? AND (km_atual IS NULL OR km_atual < ?)', [km, veiculoId, km]);
+}
+
+async function listarLeiturasKm(veiculoId, inicio = null, fim = null) {
+  const where = ['veiculo_id = ?'];
+  const params = [veiculoId];
+  if (inicio) { where.push('data_leitura >= ?'); params.push(inicio); }
+  if (fim) { where.push('data_leitura <= ?'); params.push(fim); }
+  const [rows] = await db.query(
+    `SELECT id, veiculo_id AS veiculoId, km, data_leitura AS dataLeitura, origem, created_at AS createdAt
+     FROM veiculo_km_historico
+     WHERE ${where.join(' AND ')}
+     ORDER BY data_leitura ASC, id ASC`,
+    params
+  );
+  return rows;
+}
+
+async function obterMediasKm(veiculoId, inicio = null, fim = null) {
+  const where = ['veiculo_id = ?'];
+  const params = [veiculoId];
+  if (inicio) { where.push('data_leitura >= ?'); params.push(inicio); }
+  if (fim) { where.push('data_leitura <= ?'); params.push(fim); }
+
+  const [primeiraRows] = await db.query(
+    `SELECT km, data_leitura AS dataLeitura FROM veiculo_km_historico WHERE ${where.join(' AND ')} ORDER BY data_leitura ASC, id ASC LIMIT 1`,
+    params
+  );
+  const [ultimaRows] = await db.query(
+    `SELECT km, data_leitura AS dataLeitura FROM veiculo_km_historico WHERE ${where.join(' AND ')} ORDER BY data_leitura DESC, id DESC LIMIT 1`,
+    params
+  );
+
+  if (!primeiraRows.length || !ultimaRows.length) {
+    return { kmInicial: null, kmFinal: null, deltaKm: 0, dias: 0, mediaDia: 0, mediaSemana: 0, mediaMes: 0, periodo: { inicio, fim } };
+  }
+
+  const kmInicial = primeiraRows[0].km || 0;
+  const kmFinal = ultimaRows[0].km || 0;
+  const deltaKm = Math.max(0, kmFinal - kmInicial);
+  const dIni = new Date(primeiraRows[0].dataLeitura);
+  const dFim = new Date(ultimaRows[0].dataLeitura);
+  const ms = Math.max(1, dFim.getTime() - dIni.getTime());
+  const dias = Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
+  const mediaDia = deltaKm / dias;
+  return {
+    kmInicial,
+    kmFinal,
+    deltaKm,
+    dias,
+    mediaDia,
+    mediaSemana: mediaDia * 7,
+    mediaMes: mediaDia * 30,
+    periodo: { inicio: inicio || dIni.toISOString(), fim: fim || dFim.toISOString() },
+  };
+}
+
+module.exports = {
+  listar,
+  criar,
+  atualizar,
+  excluir,
+  inserirFotos,
+  registrarLeituraKm,
+  listarLeiturasKm,
+  obterMediasKm,
+};

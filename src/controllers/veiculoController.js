@@ -81,6 +81,14 @@ async function criar(req, res, next) {
       status,
     });
 
+    // registra leitura de KM inicial
+    try {
+      await veiculoService.registrarLeituraKm(item.id, km, null, 'FORM');
+    } catch (err) {
+      // não bloqueia o cadastro se falhar o histórico
+      console.warn('Falha ao registrar KM inicial:', err?.message || err);
+    }
+
     if (fotosFiles.length) {
       await veiculoService.inserirFotos(
         item.id,
@@ -141,6 +149,16 @@ async function atualizar(req, res, next) {
       manualNome,
     });
 
+    // registra leitura se informada
+    const kmAtualNum = Number(payload.kmAtual);
+    if (!Number.isNaN(kmAtualNum) && kmAtualNum >= 0) {
+      try {
+        await veiculoService.registrarLeituraKm(id, kmAtualNum, null, 'FORM');
+      } catch (err) {
+        console.warn('Falha ao registrar KM em atualização:', err?.message || err);
+      }
+    }
+
     if (fotosFiles.length) {
       await veiculoService.inserirFotos(
         id,
@@ -167,4 +185,43 @@ async function excluir(req, res, next) {
   }
 }
 
-module.exports = { listar, criar, atualizar, excluir };
+// ===== Histórico de KM =====
+async function adicionarKm(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { km, dataLeitura } = req.body;
+    const kmNum = Number(km);
+    if (Number.isNaN(kmNum) || kmNum < 0) {
+      return res.status(400).json({ message: 'Informe um KM válido.' });
+    }
+    await veiculoService.registrarLeituraKm(id, kmNum, dataLeitura || null, 'MANUAL');
+    res.status(201).json({ veiculoId: Number(id), km: kmNum, dataLeitura: dataLeitura || new Date().toISOString() });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    next(e);
+  }
+}
+
+async function listarKms(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { inicio, fim } = req.query;
+    const rows = await veiculoService.listarLeiturasKm(id, inicio || null, fim || null);
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function mediasKms(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { inicio, fim } = req.query;
+    const data = await veiculoService.obterMediasKm(id, inicio || null, fim || null);
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { listar, criar, atualizar, excluir, adicionarKm, listarKms, mediasKms };
