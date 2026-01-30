@@ -888,8 +888,12 @@ if (userForm) {
           if (!res.ok) {
             throw new Error(data?.message || 'Erro ao atualizar usuário.');
           }
-          msgEl.textContent = 'Usuário atualizado com sucesso.';
-          msgEl.style.color = '#2ecc71';
+          if (typeof showToast === 'function') {
+            showToast('Usuário atualizado com sucesso.');
+          }
+          if (msgEl) {
+            msgEl.textContent = '';
+          }
           return carregarUsuariosApi();
         })
         .then(() => {
