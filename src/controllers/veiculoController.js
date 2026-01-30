@@ -8,6 +8,36 @@ const validarPlacaBR = (placa) => {
   return reAntiga.test(p) || reMercosul.test(p);
 };
 
+// Validação compartilhada para criar/atualizar veículo
+function validarPayloadVeiculo(body = {}) {
+  const erros = [];
+  const {
+    marcaModelo,
+    anoFabricacao,
+    placa,
+    placaVinculada,
+    unidade,
+    kmAtual,
+    proximaRevisaoKm,
+    status,
+  } = body;
+
+  if (!marcaModelo) erros.push('Informe Marca/Modelo.');
+  const ano = Number(anoFabricacao);
+  const currentYear = new Date().getFullYear();
+  if (!(ano >= 1970 && ano <= currentYear + 1)) erros.push('Ano de fabricação inválido.');
+  if (!validarPlacaBR(placa)) erros.push('Placa inválida.');
+  if (placaVinculada && !validarPlacaBR(placaVinculada)) erros.push('Placa vinculada inválida.');
+  if (!unidade) erros.push('Informe a Unidade.');
+  const km = Number(kmAtual);
+  const proxKm = Number(proximaRevisaoKm);
+  if (!(km >= 0)) erros.push('Km Atual inválido.');
+  if (!(proxKm >= 0)) erros.push('Próxima Revisão Km inválido.');
+  if (!status || !['BASE', 'BAIXADA', 'OFICINA', 'ATIVA'].includes(status)) erros.push('Status inválido.');
+
+  return erros;
+}
+
 async function listar(req, res, next) {
   try {
     const itens = await veiculoService.listar();
@@ -36,20 +66,7 @@ async function criar(req, res, next) {
       status,
     } = req.body;
 
-    const erros = [];
-    if (!marcaModelo) erros.push('Informe Marca/Modelo.');
-    const ano = Number(anoFabricacao);
-    const currentYear = new Date().getFullYear();
-    if (!(ano >= 1970 && ano <= currentYear + 1)) erros.push('Ano de fabricação inválido.');
-    if (!validarPlacaBR(placa)) erros.push('Placa inválida.');
-    if (placaVinculada && !validarPlacaBR(placaVinculada)) erros.push('Placa vinculada inválida.');
-    if (!unidade) erros.push('Informe a Unidade.');
-    const km = Number(kmAtual);
-    const proxKm = Number(proximaRevisaoKm);
-    if (!(km >= 0)) erros.push('Km Atual inválido.');
-    if (!(proxKm >= 0)) erros.push('Próxima Revisão Km inválido.');
-    if (!status || !['BASE', 'BAIXADA', 'OFICINA', 'ATIVA'].includes(status)) erros.push('Status inválido.');
-
+    const erros = validarPayloadVeiculo(req.body);
     if (erros.length) return res.status(400).json({ message: erros[0] });
 
     // Arquivos
@@ -113,13 +130,9 @@ async function atualizar(req, res, next) {
     const { id } = req.params;
     const payload = { ...req.body };
 
-    // reutiliza as validações do criar, simulando a mesma checagem
-    const mockReq = { body: payload };
-    const mockRes = {
-      status: (c) => ({ json: (o) => res.status(c).json(o) }),
-      json: (o) => o,
-    };
-    await criar(mockReq, mockRes, next);
+    // validação direta (não chamar criar aqui)
+    const erros = validarPayloadVeiculo(payload);
+    if (erros.length) return res.status(400).json({ message: erros[0] });
 
     const files = req.files || {};
     const manualFile = files.manual?.[0] || null;

@@ -219,7 +219,17 @@ if (forgotPasswordLink && forgotPasswordModal) {
         return;
       }
 
-      if (msgEl) { msgEl.textContent = 'Veículo salvo com sucesso.'; msgEl.style.color = '#2ecc71'; }
+      // Popup conforme ação solicitada
+      if (typeof showToast === 'function') {
+        if (isEdit) showToast('Alterações realizadas com sucesso!');
+        else showToast('Veículo cadastrado com sucesso');
+      }
+
+      // Refletir mensagem abaixo do formulário
+      if (msgEl) {
+        msgEl.textContent = isEdit ? 'Alterações realizadas com sucesso!' : 'Veículo cadastrado com sucesso';
+        msgEl.style.color = '#2ecc71';
+      }
       form.reset();
       editId = null; form.removeAttribute('data-edit-id');
       const submitBtn = form.querySelector('button[type="submit"]');
