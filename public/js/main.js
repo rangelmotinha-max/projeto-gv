@@ -129,7 +129,11 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-prox-rev-km').value = v.proximaRevisaoKm ?? '';
         document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
         document.getElementById('veic-condutor').value = v.condutorAtual || '';
-        document.getElementById('veic-cartao').value = v.cartao || '';
+        const cartaoInput = document.getElementById('veic-cartao');
+        cartaoInput.value = v.cartao || '';
+        if (cartaoInput && typeof cartaoInput._updateCardOverlay === 'function') {
+          cartaoInput._updateCardOverlay();
+        }
         document.getElementById('veic-os-cman').value = v.osCman || '';
         document.getElementById('veic-os-prime').value = v.osPrime || '';
         document.getElementById('veic-status').value = v.status || '';
@@ -303,6 +307,53 @@ if (forgotPasswordForm) {
   });
 }
 const apenasDigitos = (valor) => valor.replace(/\D/g, '');
+
+// Máscara e destaque do campo Cartão (xxxx.xxxx.xxxx.xxxx) — últimos 4 dígitos em azul
+(function () {
+  const input = document.getElementById('veic-cartao');
+  const overlaySpan = document.querySelector('.card-input-wrapper .card-text');
+  if (!input || !overlaySpan) return;
+
+  const formatDigits = (digits) => {
+    digits = digits.slice(0, 16);
+    const groups = digits.match(/.{1,4}/g) || [];
+    return groups.join('.');
+  };
+
+  const update = () => {
+    const digits = (input.value || '').replace(/\D/g, '').slice(0, 16);
+    const formatted = formatDigits(digits);
+    input.value = formatted;
+
+    if (!digits) {
+      overlaySpan.textContent = '';
+      return;
+    }
+
+    if (digits.length <= 4) {
+      overlaySpan.innerHTML = '<span class="last4">' + digits + '</span>';
+    } else {
+      const first = digits.slice(0, digits.length - 4);
+      const last = digits.slice(-4);
+      const firstFormatted = (first.match(/.{1,4}/g) || []).join('.');
+      overlaySpan.innerHTML = (firstFormatted ? firstFormatted + '.' : '') + '<span class="last4">' + last + '</span>';
+    }
+  };
+
+  // disponibiliza a função para chamadas externas (quando o value é atribuído por código)
+  input._updateCardOverlay = update;
+  input.addEventListener('input', update);
+  input.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const digits = paste.replace(/\D/g, '').slice(0, 16);
+    input.value = digits;
+    update();
+  });
+
+  // Inicializa caso o campo já venha preenchido (edição)
+  update();
+})();
 
 // ===== Métricas da Home (contagem de veículos) =====
 (() => {

@@ -110,7 +110,10 @@
               </div>
               <div class="form-field">
                 <label for="veic-cartao">Cartão</label>
-                <input type="text" id="veic-cartao" />
+                <div class="card-input-wrapper">
+                  <input type="text" id="veic-cartao" inputmode="numeric" maxlength="19" autocomplete="off" />
+                  <div class="card-overlay" aria-hidden="true"><span class="card-text"></span></div>
+                </div>
               </div>
             </div>
 

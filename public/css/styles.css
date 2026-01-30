@@ -398,6 +398,31 @@ body.dashboard-body {
   color: #495057;
   margin-bottom: 6px;
 }
+/* Estilos para máscara de cartão com overlay */
+.card-input-wrapper {
+  position: relative;
+}
+.card-input-wrapper input#veic-cartao {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: #000;
+}
+.card-input-wrapper .card-overlay {
+  position: absolute;
+  inset: 0 0 0 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #495057;
+  padding: 0 12px;
+  z-index: 2;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.card-input-wrapper .card-overlay .card-text { display: inline; }
+.card-input-wrapper .card-overlay .last4 { color: #1e66ff; }
 
 /* Formulário de cadastro de usuários */
 
