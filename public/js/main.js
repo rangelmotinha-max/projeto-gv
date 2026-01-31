@@ -1,3 +1,83 @@
+// ===== Toast utilitário (global) =====
+window.showToast = (msg = '') => {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+};
+
+// ===== Login =====
+(() => {
+  const form = document.getElementById('login-form');
+  if (!form) return; // só na tela de login
+
+  const inputMatricula = document.getElementById('matricula');
+  const inputSenha = document.getElementById('password');
+  const btnLogin = document.getElementById('btn-login');
+  const spinner = btnLogin?.querySelector('.btn-spinner');
+  const btnText = btnLogin?.querySelector('.btn-text');
+  const btnToggle = document.getElementById('toggle-password');
+
+  // Alternar exibição da senha
+  if (btnToggle && inputSenha) {
+    btnToggle.addEventListener('click', () => {
+      const show = inputSenha.type === 'password';
+      inputSenha.type = show ? 'text' : 'password';
+      btnToggle.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+    });
+  }
+
+  const onlyDigits = (v = '') => String(v).replace(/\D/g, '');
+
+  const setLoading = (loading) => {
+    if (!btnLogin) return;
+    btnLogin.disabled = loading;
+    if (spinner) spinner.style.display = loading ? 'inline-block' : 'none';
+    if (btnText) btnText.style.opacity = loading ? '0.6' : '1';
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const matricula = onlyDigits(inputMatricula?.value || '');
+    const senha = onlyDigits(inputSenha?.value || '');
+
+    if (!/^\d{8}$/.test(matricula)) {
+      showToast('Informe uma matrícula com 8 números.');
+      inputMatricula?.focus();
+      return;
+    }
+    if (!/^\d{4}$/.test(senha)) {
+      showToast('A senha deve ter 4 números.');
+      inputSenha?.focus();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch('/api/v1/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matricula, senha }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        showToast(data?.message || 'Matrícula ou senha incorretos.');
+        return;
+      }
+
+      // Guarda o usuário e vai para a Home
+      try { localStorage.setItem('sgv:user', JSON.stringify(data)); } catch {}
+      window.location.href = '/home.html';
+    } catch (err) {
+      showToast('Falha ao conectar. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  });
+})();
+
 // Recuperação de senha (modal)
 const forgotPasswordLink = document.getElementById('forgot-password-link');
 const forgotPasswordModal = document.getElementById('forgot-password-modal');
@@ -412,6 +492,34 @@ const showToast = (message) => {
   }, 3000);
 };
 
+// Utilitário: fetch com timeout
+const fetchWithTimeout = (url, opts = {}, ms = 10000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(id));
+};
+
+// Força matrícula a aceitar apenas dígitos enquanto digita
+const matriculaInput = document.getElementById('matricula');
+if (matriculaInput) {
+  matriculaInput.addEventListener('input', () => {
+    const v = (matriculaInput.value || '').replace(/\D/g, '').slice(0, 8);
+    if (matriculaInput.value !== v) matriculaInput.value = v;
+  });
+}
+
+// Toggle de visibilidade da senha
+const passwordInput = document.getElementById('password');
+const togglePassword = document.getElementById('toggle-password');
+if (togglePassword && passwordInput) {
+  togglePassword.addEventListener('click', () => {
+    const isPwd = passwordInput.getAttribute('type') === 'password';
+    passwordInput.setAttribute('type', isPwd ? 'text' : 'password');
+    togglePassword.textContent = isPwd ? '🙈' : '👁';
+    togglePassword.setAttribute('aria-label', isPwd ? 'Ocultar senha' : 'Mostrar senha');
+  });
+}
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -421,6 +529,18 @@ if (loginForm) {
     const password = document.getElementById('password')?.value.trim() || '';
     // Sanitiza matrícula para conter apenas dígitos antes de validar.
     const matriculaSomenteDigitos = apenasDigitos(matricula);
+
+    const btn = document.getElementById('btn-login');
+    const btnText = btn?.querySelector('.btn-text');
+    const btnSpin = btn?.querySelector('.btn-spinner');
+    const setLoading = (on) => {
+      if (!btn) return;
+      btn.disabled = !!on;
+      if (btnText && btnSpin) {
+        btnText.style.opacity = on ? '0.7' : '1';
+        btnSpin.style.display = on ? 'inline-block' : 'none';
+      }
+    };
 
     if (!matricula || !password) {
       showToast('Informe matrícula e senha.');
@@ -440,13 +560,14 @@ if (loginForm) {
     }
 
     try {
-      const resposta = await fetch('/api/v1/login', {
+      setLoading(true);
+      const resposta = await fetchWithTimeout('/api/v1/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ matricula: matriculaSomenteDigitos, senha: password }),
-      });
+      }, 10000);
 
       const data = await resposta.json().catch(() => null);
 
@@ -464,7 +585,10 @@ if (loginForm) {
       window.location.href = '/home.html';
     } catch (error) {
       console.error(error);
-      showToast('Erro ao tentar fazer login.');
+      const aborted = (error && (error.name === 'AbortError'));
+      showToast(aborted ? 'Servidor não respondeu. Tente novamente.' : 'Erro ao tentar fazer login.');
+    } finally {
+      setLoading(false);
     }
   });
 }

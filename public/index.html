@@ -40,20 +40,27 @@
 
           <div class="form-group">
             <label for="password">Senha</label>
-            <input
-              type="password"
-              id="password"
-              required
-              maxlength="4"
-              pattern="\d{4}"
-              title="A senha deve ter exatamente 4 números"
-              inputmode="numeric"
-            />
+            <div class="password-wrapper" style="display:flex;gap:8px;align-items:center;">
+              <input
+                type="password"
+                id="password"
+                required
+                maxlength="4"
+                pattern="\d{4}"
+                title="A senha deve ter exatamente 4 números"
+                inputmode="numeric"
+                style="flex:1;"
+              />
+              <button type="button" id="toggle-password" aria-label="Mostrar senha" class="btn-secondary" style="padding:6px 10px;">👁</button>
+            </div>
           </div>
 
 
 
-          <button type="submit" class="btn-primary">Entrar</button>
+          <button type="submit" class="btn-primary" id="btn-login">
+            <span class="btn-text">Entrar</span>
+            <span class="btn-spinner" style="display:none;margin-left:8px;">⏳</span>
+          </button>
 
           <div class="forgot-password">
             <a href="#" id="forgot-password-link"><i class="fa-solid fa-lock"></i> Esqueceu sua senha?</a>

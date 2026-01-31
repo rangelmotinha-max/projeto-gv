@@ -21,13 +21,15 @@ let dbPromise = open({ filename: DB_FILE, driver: sqlite3.Database })
 // Fornece API compatível com uso existente (query/execute/getConnection)
 async function query(sql, params = []) {
   const db = await dbPromise;
-  const rows = await db.all(sql, params);
+  const bind = Array.isArray(params) ? params : [params];
+  const rows = await db.all(sql, ...bind);
   return [rows];
 }
 
 async function execute(sql, params = []) {
   const db = await dbPromise;
-  const res = await db.run(sql, params);
+  const bind = Array.isArray(params) ? params : [params];
+  const res = await db.run(sql, ...bind);
   return [{ insertId: res.lastID ?? 0, affectedRows: res.changes ?? 0 }];
 }
 
@@ -37,8 +39,8 @@ async function getConnection() {
     beginTransaction: () => db.exec('BEGIN'),
     commit: () => db.exec('COMMIT'),
     rollback: () => db.exec('ROLLBACK'),
-    execute: (sql, params = []) => db.run(sql, params),
-    query: (sql, params = []) => db.all(sql, params),
+    execute: (sql, params = []) => db.run(sql, ...(Array.isArray(params) ? params : [params])),
+    query: (sql, params = []) => db.all(sql, ...(Array.isArray(params) ? params : [params])),
     release: async () => {},
   };
 }

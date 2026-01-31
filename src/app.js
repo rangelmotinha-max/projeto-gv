@@ -1,5 +1,6 @@
 // Configuração principal do Express
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./middlewares/logger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -13,6 +14,10 @@ const app = express();
 // Middlewares globais
 app.use(express.json());
 app.use(logger);
+
+// Limite de tentativas de login (5 tentativas por 5 minutos por IP)
+const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false });
+app.use('/api/v1/login', loginLimiter);
 
 // Arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, '..', 'public')));
