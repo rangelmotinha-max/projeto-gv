@@ -35,7 +35,7 @@ function validarPayloadVeiculo(body = {}) {
   if (!(proxKm >= 0)) erros.push('Próxima Revisão Km inválido.');
   if (!status || !['BASE', 'BAIXADA', 'OFICINA', 'ATIVA'].includes(status)) erros.push('Status inválido.');
 
-  return erros;
+  return { erros, valores: { ano, km, proxKm } };
 }
 
 async function listar(req, res, next) {
@@ -52,13 +52,10 @@ async function criar(req, res, next) {
 
     let {
       marcaModelo,
-      anoFabricacao,
       prefixo,
       placa,
       placaVinculada,
       unidade,
-      kmAtual,
-      proximaRevisaoKm,
       dataProximaRevisao,
       condutorAtual,
       cartao,
@@ -75,8 +72,9 @@ async function criar(req, res, next) {
       }
     }
 
-    const erros = validarPayloadVeiculo(req.body);
+    const { erros, valores } = validarPayloadVeiculo(req.body);
     if (erros.length) return res.status(400).json({ message: erros[0] });
+    const { ano, km, proxKm } = valores;
 
     // Arquivos
     const files = req.files || {};
@@ -149,7 +147,7 @@ async function atualizar(req, res, next) {
     }
 
     // validação direta (não chamar criar aqui)
-    const erros = validarPayloadVeiculo(payload);
+    const { erros, valores } = validarPayloadVeiculo(payload);
     if (erros.length) return res.status(400).json({ message: erros[0] });
 
     const files = req.files || {};
@@ -163,13 +161,13 @@ async function atualizar(req, res, next) {
 
     const atualizado = await veiculoService.atualizar(id, {
       marcaModelo: payload.marcaModelo,
-      anoFabricacao: Number(payload.anoFabricacao),
+      anoFabricacao: valores.ano,
       prefixo: payload.prefixo || null,
       placa: payload.placa?.toUpperCase(),
       placaVinculada: payload.placaVinculada ? payload.placaVinculada.toUpperCase() : null,
       unidade: payload.unidade,
-      kmAtual: Number(payload.kmAtual),
-      proximaRevisaoKm: Number(payload.proximaRevisaoKm),
+      kmAtual: valores.km,
+      proximaRevisaoKm: valores.proxKm,
       dataProximaRevisao: payload.dataProximaRevisao || null,
       condutorAtual: payload.condutorAtual || null,
       cartao: payload.cartao || null,
@@ -181,7 +179,7 @@ async function atualizar(req, res, next) {
     });
 
     // registra leitura se informada
-    const kmAtualNum = Number(payload.kmAtual);
+    const kmAtualNum = valores.km;
     if (!Number.isNaN(kmAtualNum) && kmAtualNum >= 0) {
       try {
         await veiculoService.registrarLeituraKm(id, kmAtualNum, null, 'FORM');
