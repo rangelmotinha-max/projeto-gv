@@ -184,19 +184,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
         if (!currentVeiculoId || !foto?.id) return;
         const confirmado = window.confirm('Deseja realmente excluir esse registro?');
         if (!confirmado) return;
-        try {
-          const res = await fetch(`/api/v1/veiculos/${currentVeiculoId}/fotos/${foto.id}`, {
-            method: 'DELETE',
-          });
-          if (!res.ok) throw new Error('Erro ao excluir foto');
-          existing = existing.filter((item) => item.id !== foto.id);
-          renderizar();
-          if (typeof showToast === 'function') {
-            showToast('Foto excluída com sucesso.');
-          }
-        } catch (error) {
-          console.error(error);
-          window.alert('Erro ao excluir foto.');
+        // Dispara a exclusão via handler para manter o estado atualizado.
+        const sucesso = await excluirFotoExistente(currentVeiculoId, foto.id);
+        if (sucesso && typeof showToast === 'function') {
+          showToast('Foto excluída com sucesso.');
         }
       });
 
@@ -280,7 +271,28 @@ if (forgotPasswordLink && forgotPasswordModal) {
       adicionarArquivos(event.target.files);
     });
 
+    const excluirFotoExistente = async (veiculoId, fotoId) => {
+      if (!veiculoId || !fotoId) return false;
+      try {
+        const res = await fetch(`/api/v1/veiculos/${veiculoId}/fotos/${fotoId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          window.alert('Erro ao excluir foto');
+          return false;
+        }
+        existing = existing.filter((item) => item.id !== fotoId);
+        renderizar();
+        return true;
+      } catch (error) {
+        console.error(error);
+        window.alert('Erro ao excluir foto');
+        return false;
+      }
+    };
+
     return {
+      excluirFotoExistente,
       setExistingFotos: (fotos, veiculoId = null) => {
         existing = Array.isArray(fotos) ? fotos : [];
         currentVeiculoId = veiculoId;
@@ -407,11 +419,11 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-os-cman').value = v.osCman || '';
         document.getElementById('veic-os-prime').value = v.osPrime || '';
         document.getElementById('veic-status').value = v.status || '';
-        if (fotosHandler) {
-          fotosHandler.setExistingFotos(v.fotos || [], v.id);
-        }
-
         editId = v.id;
+        if (fotosHandler) {
+          // Repassa o editId atual para o handler de fotos.
+          fotosHandler.setExistingFotos(v.fotos || [], editId);
+        }
         form.setAttribute('data-edit-id', String(editId));
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.textContent = 'Salvar alterações';
