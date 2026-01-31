@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const veiculoService = require('../services/veiculoService');
 
@@ -209,6 +210,39 @@ async function excluir(req, res, next) {
   }
 }
 
+async function excluirFoto(req, res, next) {
+  try {
+    const { id, fotoId } = req.params;
+    const veiculoIdNum = Number(id);
+    const fotoIdNum = Number(fotoId);
+    if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0) {
+      return res.status(400).json({ message: 'Informe um ID de veículo válido.' });
+    }
+    if (!Number.isInteger(fotoIdNum) || fotoIdNum <= 0) {
+      return res.status(400).json({ message: 'Informe um ID de foto válido.' });
+    }
+
+    const foto = await veiculoService.excluirFoto(veiculoIdNum, fotoIdNum);
+
+    if (foto?.caminho) {
+      const caminhoRelativo = foto.caminho.startsWith('/') ? foto.caminho.slice(1) : foto.caminho;
+      const caminhoCompleto = path.resolve(__dirname, '..', '..', caminhoRelativo);
+      try {
+        await fs.promises.unlink(caminhoCompleto);
+      } catch (err) {
+        if (err?.code !== 'ENOENT') {
+          console.warn('Falha ao remover arquivo de foto:', err?.message || err);
+        }
+      }
+    }
+
+    res.status(204).send();
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    next(e);
+  }
+}
+
 // ===== Histórico de KM =====
 async function adicionarKm(req, res, next) {
   try {
@@ -248,4 +282,4 @@ async function mediasKms(req, res, next) {
   }
 }
 
-module.exports = { listar, criar, atualizar, excluir, adicionarKm, listarKms, mediasKms };
+module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms };

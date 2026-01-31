@@ -197,6 +197,21 @@ async function inserirFotos(veiculoId, fotos = []) {
   }
 }
 
+async function excluirFoto(veiculoId, fotoId) {
+  const [rows] = await db.query(
+    'SELECT id, caminho FROM veiculo_fotos WHERE id = ? AND veiculo_id = ?',
+    [fotoId, veiculoId]
+  );
+  if (!rows.length) {
+    const err = new Error('Foto não encontrada.');
+    err.status = 404;
+    throw err;
+  }
+
+  await db.execute('DELETE FROM veiculo_fotos WHERE id = ? AND veiculo_id = ?', [fotoId, veiculoId]);
+  return rows[0];
+}
+
 // ===== Histórico de KM =====
 
 async function registrarLeituraKm(veiculoId, km, dataLeitura = null, origem = 'FORM') {
@@ -281,6 +296,7 @@ module.exports = {
   atualizar,
   excluir,
   inserirFotos,
+  excluirFoto,
   registrarLeituraKm,
   listarLeiturasKm,
   obterMediasKm,
