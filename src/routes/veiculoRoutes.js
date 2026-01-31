@@ -22,6 +22,7 @@ router.put(
 	]),
 	veiculoController.atualizar
 );
+router.delete('/veiculos/:id/fotos/:fotoId', veiculoController.excluirFoto);
 router.delete('/veiculos/:id', veiculoController.excluir);
 
 // Histórico de KM
