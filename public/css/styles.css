@@ -584,3 +584,27 @@ body.dashboard-body {
   cursor: pointer;
   font-size: 11px;
 }
+
+.fotos-preview__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fotos-preview__action {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.fotos-preview__action--open {
+  background: #e3f2fd;
+  color: #0d6efd;
+}
+
+.fotos-preview__action--delete {
+  background: #f8d7da;
+  color: #721c24;
+}

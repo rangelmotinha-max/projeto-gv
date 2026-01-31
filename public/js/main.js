@@ -128,6 +128,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const maxSizeBytes = maxSizeMb * 1024 * 1024;
     const selected = [];
     let existing = [];
+    let currentVeiculoId = null;
 
     const setErro = (mensagem) => {
       if (!msgEl) return;
@@ -161,7 +162,46 @@ if (forgotPasswordLink && forgotPasswordModal) {
       tag.textContent = 'Existente';
 
       meta.append(nome, tag);
-      card.append(thumb, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'fotos-preview__actions';
+
+      const abrir = document.createElement('button');
+      abrir.type = 'button';
+      abrir.className = 'fotos-preview__action fotos-preview__action--open';
+      abrir.textContent = 'Abrir';
+      abrir.addEventListener('click', () => {
+        if (foto?.url) {
+          window.open(foto.url, '_blank', 'noopener');
+        }
+      });
+
+      const excluir = document.createElement('button');
+      excluir.type = 'button';
+      excluir.className = 'fotos-preview__action fotos-preview__action--delete';
+      excluir.textContent = 'Excluir';
+      excluir.addEventListener('click', async () => {
+        if (!currentVeiculoId || !foto?.id) return;
+        const confirmado = window.confirm('Deseja realmente excluir esse registro?');
+        if (!confirmado) return;
+        try {
+          const res = await fetch(`/api/v1/veiculos/${currentVeiculoId}/fotos/${foto.id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error('Erro ao excluir foto');
+          existing = existing.filter((item) => item.id !== foto.id);
+          renderizar();
+          if (typeof showToast === 'function') {
+            showToast('Foto excluída com sucesso.');
+          }
+        } catch (error) {
+          console.error(error);
+          window.alert('Erro ao excluir foto.');
+        }
+      });
+
+      actions.append(abrir, excluir);
+      card.append(thumb, meta, actions);
 
       return card;
     };
@@ -241,8 +281,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
     });
 
     return {
-      setExistingFotos: (fotos) => {
+      setExistingFotos: (fotos, veiculoId = null) => {
         existing = Array.isArray(fotos) ? fotos : [];
+        currentVeiculoId = veiculoId;
         renderizar();
       },
       limpar: () => {
@@ -251,6 +292,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         });
         selected.length = 0;
         existing = [];
+        currentVeiculoId = null;
         renderizar();
       },
       getSelectedFiles: () => selected.map((item) => item.file),
@@ -366,7 +408,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-os-prime').value = v.osPrime || '';
         document.getElementById('veic-status').value = v.status || '';
         if (fotosHandler) {
-          fotosHandler.setExistingFotos(v.fotos || []);
+          fotosHandler.setExistingFotos(v.fotos || [], v.id);
         }
 
         editId = v.id;
