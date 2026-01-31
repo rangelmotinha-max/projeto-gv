@@ -79,6 +79,56 @@ async function criar(payload) {
   return { id: result.insertId, ...payload };
 }
 
+async function criarComFotos(payload, fotos = []) {
+  const sql = `
+    INSERT INTO veiculos
+      (marca_modelo, ano_fabricacao, prefixo, placa, placa_vinculada, unidade,
+       km_atual, proxima_revisao_km, data_proxima_revisao,
+       condutor_atual, cartao, os_cman, os_prime, manual_path, manual_nome, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  const params = [
+    payload.marcaModelo,
+    payload.anoFabricacao,
+    payload.prefixo,
+    payload.placa,
+    payload.placaVinculada,
+    payload.unidade,
+    payload.kmAtual,
+    payload.proximaRevisaoKm,
+    payload.dataProximaRevisao,
+    payload.condutorAtual,
+    payload.cartao,
+    payload.osCman,
+    payload.osPrime,
+    payload.manualPath || null,
+    payload.manualNome || null,
+    payload.status,
+  ];
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [result] = await conn.execute(sql, params);
+    const veiculoId = result.insertId;
+
+    if (fotos.length) {
+      const fotoSql = 'INSERT INTO veiculo_fotos (veiculo_id, caminho, nome_arquivo) VALUES (?, ?, ?)';
+      for (const f of fotos) {
+        await conn.execute(fotoSql, [veiculoId, f.caminho, f.nome]);
+      }
+    }
+
+    await conn.commit();
+    return { id: veiculoId, ...payload };
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
 async function atualizar(id, payload) {
   const sets = [
     'marca_modelo = ?',
@@ -147,7 +197,6 @@ async function inserirFotos(veiculoId, fotos = []) {
   }
 }
 
-module.exports = { listar, criar, atualizar, excluir, inserirFotos };
 // ===== Histórico de KM =====
 
 async function registrarLeituraKm(veiculoId, km, dataLeitura = null, origem = 'FORM') {
@@ -228,6 +277,7 @@ async function obterMediasKm(veiculoId, inicio = null, fim = null) {
 module.exports = {
   listar,
   criar,
+  criarComFotos,
   atualizar,
   excluir,
   inserirFotos,
