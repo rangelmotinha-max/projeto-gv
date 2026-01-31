@@ -518,8 +518,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
         else showToast('Veículo cadastrado com sucesso');
 =======
         if (isEdit) {
-          // Mantém apenas o toast no fluxo de edição para evitar duplicidade.
+          // Mantém o toast e garante o alerta no fluxo de edição.
           showToast('Alterações realizadas com sucesso!');
+          window.alert('Alterações realizadas com sucesso!');
         } else {
           // Exibe apenas o toast no fluxo de cadastro.
           showToast('Veículo cadastrado com sucesso');
