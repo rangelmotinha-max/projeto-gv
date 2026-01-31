@@ -210,7 +210,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
         document.getElementById('veic-condutor').value = v.condutorAtual || '';
         const cartaoInput = document.getElementById('veic-cartao');
-        cartaoInput.value = v.cartao || '';
+        if (v.cartao && typeof v.cartao === 'string' && v.cartao.length === 16) {
+          // Mostra apenas os 4 últimos dígitos editáveis
+          cartaoInput.value = '4599.0000.0000.' + v.cartao.slice(12);
+        } else {
+          cartaoInput.value = '4599.0000.0000.';
+        }
         if (cartaoInput && typeof cartaoInput._updateCardOverlay === 'function') {
           cartaoInput._updateCardOverlay();
         }
@@ -242,7 +247,15 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const proximaRevisaoKm = Number(toDigits(document.getElementById('veic-prox-rev-km').value));
     const dataProximaRevisao = document.getElementById('veic-data-prox-rev').value;
     const condutorAtual = document.getElementById('veic-condutor').value.trim();
-    const cartao = document.getElementById('veic-cartao').value.trim();
+    // Cartão: só permite digitar os 4 últimos dígitos, prefixo fixo
+    const cartaoInput = document.getElementById('veic-cartao');
+    let cartao = cartaoInput.value.trim();
+    // Remove tudo que não for número
+    cartao = cartao.replace(/\D/g, '');
+    // Garante que o valor tenha pelo menos 4 dígitos finais
+    let ultimos4 = cartao.slice(-4);
+    if (ultimos4.length < 4) ultimos4 = ultimos4.padStart(4, '0');
+    cartao = '459900000000' + ultimos4;
     const osCman = document.getElementById('veic-os-cman').value.trim();
     const osPrime = document.getElementById('veic-os-prime').value.trim();
     const status = document.getElementById('veic-status').value;
@@ -399,49 +412,61 @@ if (forgotPasswordForm) {
 const apenasDigitos = (valor) => valor.replace(/\D/g, '');
 
 // Máscara e destaque do campo Cartão (xxxx.xxxx.xxxx.xxxx) — últimos 4 dígitos em azul
+// Máscara e destaque do campo Cartão (4599.0000.0000.____)
 (function () {
   const input = document.getElementById('veic-cartao');
   const overlaySpan = document.querySelector('.card-input-wrapper .card-text');
   if (!input || !overlaySpan) return;
 
-  const formatDigits = (digits) => {
-    digits = digits.slice(0, 16);
-    const groups = digits.match(/.{1,4}/g) || [];
-    return groups.join('.');
-  };
+  // Bloqueia edição dos 12 primeiros dígitos
+  input.addEventListener('keydown', function (e) {
+    const pos = input.selectionStart;
+    // Permite navegação, backspace/delete, tab, etc
+    if ([8, 9, 37, 39, 46].includes(e.keyCode)) return;
+    // Só permite digitar nos últimos 4 dígitos
+    if (pos < 15) {
+      e.preventDefault();
+    }
+    // Só permite números
+    if (!/\d/.test(e.key) && e.key.length === 1) {
+      e.preventDefault();
+    }
+  });
 
+  // Valor padrão ao focar
+  input.addEventListener('focus', function () {
+    if (!input.value || input.value.length < 19) {
+      input.value = '4599.0000.0000.';
+      update();
+      setTimeout(() => input.setSelectionRange(15, 19), 0);
+    }
+  });
+
+  // Seleção automática dos últimos 4 dígitos ao clicar
+  input.addEventListener('click', function () {
+    if (input.selectionStart < 15) {
+      input.setSelectionRange(15, 19);
+    }
+  });
+
+  // Atualiza overlay
   const update = () => {
-    const digits = (input.value || '').replace(/\D/g, '').slice(0, 16);
-    const formatted = formatDigits(digits);
-    input.value = formatted;
-
-    if (!digits) {
-      overlaySpan.textContent = '';
-      return;
-    }
-
-    if (digits.length <= 4) {
-      overlaySpan.innerHTML = '<span class="last4">' + digits + '</span>';
-    } else {
-      const first = digits.slice(0, digits.length - 4);
-      const last = digits.slice(-4);
-      const firstFormatted = (first.match(/.{1,4}/g) || []).join('.');
-      overlaySpan.innerHTML = (firstFormatted ? firstFormatted + '.' : '') + '<span class="last4">' + last + '</span>';
-    }
+    let val = input.value.replace(/\D/g, '');
+    if (val.length < 12) val = '459900000000';
+    const last4 = val.slice(-4);
+    overlaySpan.innerHTML = '4599.0000.0000.' + '<span class="last4">' + last4.padStart(4, '_') + '</span>';
   };
-
-  // disponibiliza a função para chamadas externas (quando o value é atribuído por código)
   input._updateCardOverlay = update;
   input.addEventListener('input', update);
   input.addEventListener('paste', (e) => {
     e.preventDefault();
     const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
-    const digits = paste.replace(/\D/g, '').slice(0, 16);
-    input.value = digits;
+    const digits = paste.replace(/\D/g, '').slice(-4);
+    input.value = '4599.0000.0000.' + digits;
     update();
+    setTimeout(() => input.setSelectionRange(15, 19), 0);
   });
-
-  // Inicializa caso o campo já venha preenchido (edição)
+  // Inicializa
   update();
 })();
 

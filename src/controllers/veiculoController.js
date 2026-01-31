@@ -49,7 +49,8 @@ async function listar(req, res, next) {
 
 async function criar(req, res, next) {
   try {
-    const {
+
+    let {
       marcaModelo,
       anoFabricacao,
       prefixo,
@@ -65,6 +66,14 @@ async function criar(req, res, next) {
       osPrime,
       status,
     } = req.body;
+
+    // Sanitização do campo cartao
+    if (cartao) {
+      cartao = String(cartao).replace(/\D/g, '');
+      if (cartao.length !== 16) {
+        return res.status(400).json({ message: 'O campo cartão deve conter exatamente 16 dígitos numéricos.' });
+      }
+    }
 
     const erros = validarPayloadVeiculo(req.body);
     if (erros.length) return res.status(400).json({ message: erros[0] });
@@ -127,8 +136,17 @@ async function criar(req, res, next) {
 
 async function atualizar(req, res, next) {
   try {
+
     const { id } = req.params;
     const payload = { ...req.body };
+
+    // Sanitização do campo cartao
+    if (payload.cartao) {
+      payload.cartao = String(payload.cartao).replace(/\D/g, '');
+      if (payload.cartao.length !== 16) {
+        return res.status(400).json({ message: 'O campo cartão deve conter exatamente 16 dígitos numéricos.' });
+      }
+    }
 
     // validação direta (não chamar criar aqui)
     const erros = validarPayloadVeiculo(payload);
