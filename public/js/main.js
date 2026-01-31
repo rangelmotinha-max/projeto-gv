@@ -122,6 +122,149 @@ if (forgotPasswordLink && forgotPasswordModal) {
     return { label: 'Base', cls: 'status-base' };
   };
 
+  const initFotosCadastro = ({ inputEl, previewEl, msgEl, maxCount = 12, maxSizeMb = 5 }) => {
+    if (!inputEl || !previewEl) return null;
+
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+    const selected = [];
+    let existing = [];
+
+    const setErro = (mensagem) => {
+      if (!msgEl) return;
+      msgEl.textContent = mensagem;
+      msgEl.style.color = '#e74c3c';
+    };
+
+    const limparErro = () => {
+      if (!msgEl) return;
+      if (msgEl.textContent === '') return;
+      msgEl.textContent = '';
+    };
+
+    const criarCardExistente = (foto) => {
+      const card = document.createElement('div');
+      card.className = 'fotos-preview__card';
+
+      const thumb = document.createElement('img');
+      thumb.className = 'fotos-preview__thumb';
+      thumb.alt = foto?.nome || 'Foto existente';
+      thumb.src = foto?.url || '';
+
+      const meta = document.createElement('div');
+      meta.className = 'fotos-preview__meta';
+
+      const nome = document.createElement('span');
+      nome.textContent = foto?.nome || 'Foto existente';
+
+      const tag = document.createElement('span');
+      tag.className = 'fotos-preview__tag';
+      tag.textContent = 'Existente';
+
+      meta.append(nome, tag);
+      card.append(thumb, meta);
+
+      return card;
+    };
+
+    const criarCardNovo = (item, index) => {
+      const card = document.createElement('div');
+      card.className = 'fotos-preview__card';
+
+      const thumb = document.createElement('img');
+      thumb.className = 'fotos-preview__thumb';
+      thumb.alt = item.file.name;
+      thumb.src = item.previewUrl;
+
+      const meta = document.createElement('div');
+      meta.className = 'fotos-preview__meta';
+
+      const nome = document.createElement('span');
+      nome.textContent = item.file.name;
+
+      const tag = document.createElement('span');
+      tag.className = 'fotos-preview__tag';
+      tag.textContent = 'Novo';
+
+      meta.append(nome, tag);
+
+      const remover = document.createElement('button');
+      remover.type = 'button';
+      remover.className = 'fotos-preview__remove';
+      remover.textContent = 'Remover';
+      remover.addEventListener('click', () => {
+        const [removido] = selected.splice(index, 1);
+        if (removido?.previewUrl) URL.revokeObjectURL(removido.previewUrl);
+        renderizar();
+      });
+
+      card.append(thumb, meta, remover);
+      return card;
+    };
+
+    const renderizar = () => {
+      previewEl.innerHTML = '';
+      existing.forEach((foto) => {
+        previewEl.appendChild(criarCardExistente(foto));
+      });
+      selected.forEach((item, index) => {
+        previewEl.appendChild(criarCardNovo(item, index));
+      });
+    };
+
+    const adicionarArquivos = (arquivos) => {
+      limparErro();
+      const lista = Array.from(arquivos || []);
+      const erros = [];
+
+      lista.forEach((file) => {
+        if (selected.length >= maxCount) {
+          erros.push(`Limite de ${maxCount} fotos atingido.`);
+          return;
+        }
+        if (file.size > maxSizeBytes) {
+          erros.push(`Arquivo ${file.name} excede ${maxSizeMb}MB.`);
+          return;
+        }
+        selected.push({ file, previewUrl: URL.createObjectURL(file) });
+      });
+
+      if (erros.length) {
+        setErro(erros[0]);
+      }
+
+      renderizar();
+      inputEl.value = '';
+    };
+
+    inputEl.addEventListener('change', (event) => {
+      adicionarArquivos(event.target.files);
+    });
+
+    return {
+      setExistingFotos: (fotos) => {
+        existing = Array.isArray(fotos) ? fotos : [];
+        renderizar();
+      },
+      limpar: () => {
+        selected.forEach((item) => {
+          if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+        });
+        selected.length = 0;
+        existing = [];
+        renderizar();
+      },
+      getSelectedFiles: () => selected.map((item) => item.file),
+    };
+  };
+
+  const fotosHandler = initFotosCadastro({
+    inputEl: document.getElementById('veic-fotos'),
+    previewEl: document.getElementById('veic-fotos-preview'),
+    msgEl,
+    maxCount: 12,
+    maxSizeMb: 5,
+  });
+
   const carregar = async () => {
     try {
       const res = await fetch('/api/v1/veiculos');
@@ -222,6 +365,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-os-cman').value = v.osCman || '';
         document.getElementById('veic-os-prime').value = v.osPrime || '';
         document.getElementById('veic-status').value = v.status || '';
+        if (fotosHandler) {
+          fotosHandler.setExistingFotos(v.fotos || []);
+        }
 
         editId = v.id;
         form.setAttribute('data-edit-id', String(editId));
@@ -291,10 +437,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
     fd.append('osPrime', osPrime);
     fd.append('status', status);
 
-    const fotosInput = document.getElementById('veic-fotos');
     const manualInput = document.getElementById('veic-manual');
-    if (fotosInput && fotosInput.files) {
-      Array.from(fotosInput.files).forEach((file) => fd.append('fotos', file));
+    if (fotosHandler) {
+      fotosHandler.getSelectedFiles().forEach((file) => fd.append('fotos', file));
     }
     if (manualInput && manualInput.files && manualInput.files[0]) {
       fd.append('manual', manualInput.files[0]);
@@ -324,6 +469,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         msgEl.style.color = '#2ecc71';
       }
       form.reset();
+      if (fotosHandler) fotosHandler.limpar();
       editId = null; form.removeAttribute('data-edit-id');
       const submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.textContent = 'Salvar';
@@ -337,6 +483,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
   if (btnLimpar) {
     btnLimpar.addEventListener('click', () => {
       form.reset();
+      if (fotosHandler) fotosHandler.limpar();
       editId = null; form.removeAttribute('data-edit-id');
       const submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.textContent = 'Salvar';
