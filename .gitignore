@@ -8,3 +8,4 @@ npm-debug.log*
 .DS_Store
 data/sgv.sqlite-shm
 data/sgv.sqlite-wal
+data/sgv.sqlite
