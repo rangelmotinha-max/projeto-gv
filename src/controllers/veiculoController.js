@@ -86,7 +86,12 @@ async function criar(req, res, next) {
       : null;
     const manualNome = manualFile ? manualFile.originalname : null;
 
-    const item = await veiculoService.criar({
+    const fotosPayload = fotosFiles.map((f) => ({
+      caminho: path.posix.join('/uploads/veiculos', path.basename(f.path)),
+      nome: f.originalname,
+    }));
+
+    const item = await veiculoService.criarComFotos({
       marcaModelo,
       anoFabricacao: ano,
       prefixo: prefixo || null,
@@ -103,7 +108,7 @@ async function criar(req, res, next) {
       manualPath,
       manualNome,
       status,
-    });
+    }, fotosPayload);
 
     // registra leitura de KM inicial
     try {
@@ -111,16 +116,6 @@ async function criar(req, res, next) {
     } catch (err) {
       // não bloqueia o cadastro se falhar o histórico
       console.warn('Falha ao registrar KM inicial:', err?.message || err);
-    }
-
-    if (fotosFiles.length) {
-      await veiculoService.inserirFotos(
-        item.id,
-        fotosFiles.map((f) => ({
-          caminho: path.posix.join('/uploads/veiculos', path.basename(f.path)),
-          nome: f.originalname,
-        }))
-      );
     }
 
     res.status(201).json(item);
