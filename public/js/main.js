@@ -298,6 +298,13 @@ if (forgotPasswordLink && forgotPasswordModal) {
         currentVeiculoId = veiculoId;
         renderizar();
       },
+      limparSelecionados: () => {
+        selected.forEach((item) => {
+          if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+        });
+        selected.length = 0;
+        renderizar();
+      },
       limpar: () => {
         selected.forEach((item) => {
           if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -395,41 +402,55 @@ if (forgotPasswordLink && forgotPasswordModal) {
         const idx = Number(btn.getAttribute('data-index'));
         const v = veiculos[idx];
         if (!v) return;
-
-        document.getElementById('veic-marca-modelo').value = v.marcaModelo || '';
-        document.getElementById('veic-ano').value = v.anoFabricacao || '';
-        document.getElementById('veic-prefixo').value = v.prefixo || '';
-        document.getElementById('veic-placa').value = v.placa || '';
-        document.getElementById('veic-placa-vinculada').value = v.placaVinculada || '';
-        document.getElementById('veic-unidade').value = v.unidade || '';
-        document.getElementById('veic-km-atual').value = v.kmAtual ?? '';
-        document.getElementById('veic-prox-rev-km').value = v.proximaRevisaoKm ?? '';
-        document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
-        document.getElementById('veic-condutor').value = v.condutorAtual || '';
-        const cartaoInput = document.getElementById('veic-cartao');
-        if (v.cartao && typeof v.cartao === 'string' && v.cartao.length === 16) {
-          // Mostra apenas os 4 últimos dígitos editáveis
-          cartaoInput.value = '4599.0000.0000.' + v.cartao.slice(12);
-        } else {
-          cartaoInput.value = '4599.0000.0000.';
-        }
-        if (cartaoInput && typeof cartaoInput._updateCardOverlay === 'function') {
-          cartaoInput._updateCardOverlay();
-        }
-        document.getElementById('veic-os-cman').value = v.osCman || '';
-        document.getElementById('veic-os-prime').value = v.osPrime || '';
-        document.getElementById('veic-status').value = v.status || '';
-        editId = v.id;
-        if (fotosHandler) {
-          // Repassa o editId atual para o handler de fotos.
-          fotosHandler.setExistingFotos(v.fotos || [], editId);
-        }
-        form.setAttribute('data-edit-id', String(editId));
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.textContent = 'Salvar alterações';
-        if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+        preencherFormularioVeiculo(v);
       });
     });
+  };
+
+  const preencherFormularioVeiculo = (veiculo, { mostrarMensagem = true } = {}) => {
+    if (!veiculo) return;
+
+    document.getElementById('veic-marca-modelo').value = veiculo.marcaModelo || '';
+    document.getElementById('veic-ano').value = veiculo.anoFabricacao || '';
+    document.getElementById('veic-prefixo').value = veiculo.prefixo || '';
+    document.getElementById('veic-placa').value = veiculo.placa || '';
+    document.getElementById('veic-placa-vinculada').value = veiculo.placaVinculada || '';
+    document.getElementById('veic-unidade').value = veiculo.unidade || '';
+    document.getElementById('veic-km-atual').value = veiculo.kmAtual ?? '';
+    document.getElementById('veic-prox-rev-km').value = veiculo.proximaRevisaoKm ?? '';
+    document.getElementById('veic-data-prox-rev').value = veiculo.dataProximaRevisao ? String(veiculo.dataProximaRevisao).slice(0,10) : '';
+    document.getElementById('veic-condutor').value = veiculo.condutorAtual || '';
+
+    const cartaoInput = document.getElementById('veic-cartao');
+    if (veiculo.cartao && typeof veiculo.cartao === 'string' && veiculo.cartao.length === 16) {
+      // Mostra apenas os 4 últimos dígitos editáveis
+      cartaoInput.value = '4599.0000.0000.' + veiculo.cartao.slice(12);
+    } else {
+      cartaoInput.value = '4599.0000.0000.';
+    }
+    if (cartaoInput && typeof cartaoInput._updateCardOverlay === 'function') {
+      cartaoInput._updateCardOverlay();
+    }
+
+    document.getElementById('veic-os-cman').value = veiculo.osCman || '';
+    document.getElementById('veic-os-prime').value = veiculo.osPrime || '';
+    document.getElementById('veic-status').value = veiculo.status || '';
+
+    editId = veiculo.id;
+    if (fotosHandler) {
+      // Repassa o editId atual para o handler de fotos.
+      if (typeof fotosHandler.limparSelecionados === 'function') {
+        fotosHandler.limparSelecionados();
+      }
+      fotosHandler.setExistingFotos(veiculo.fotos || [], editId);
+    }
+    form.setAttribute('data-edit-id', String(editId));
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+    if (mostrarMensagem && msgEl) {
+      msgEl.textContent = 'Editando veículo selecionado.';
+      msgEl.style.color = '#495057';
+    }
   };
 
   // Envio do formulário (POST/PUT) com arquivos (FormData)
@@ -528,13 +549,37 @@ if (forgotPasswordLink && forgotPasswordModal) {
         msgEl.textContent = isEdit ? 'Alterações realizadas com sucesso!' : 'Veículo cadastrado com sucesso';
         msgEl.style.color = '#2ecc71';
       }
-      form.reset();
-      if (fotosHandler) fotosHandler.limpar();
-      editId = null; form.removeAttribute('data-edit-id');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = 'Salvar';
-      await carregar();
-      render();
+      if (isEdit) {
+        let veiculoAtualizado = null;
+        try {
+          const detalheRes = await fetch(`/api/v1/veiculos/${idPath}`);
+          if (detalheRes.ok) {
+            veiculoAtualizado = await detalheRes.json();
+          }
+        } catch (erro) {
+          console.error(erro);
+        }
+        if (!veiculoAtualizado) {
+          await carregar();
+          veiculoAtualizado = veiculos.find((veiculo) => String(veiculo.id) === String(idPath));
+        }
+        if (veiculoAtualizado) {
+          preencherFormularioVeiculo(veiculoAtualizado, { mostrarMensagem: false });
+        }
+        if (listSection && window.getComputedStyle(listSection).display !== 'none') {
+          await carregar();
+          render();
+        }
+      } else {
+        form.reset();
+        if (fotosHandler) fotosHandler.limpar();
+        editId = null;
+        form.removeAttribute('data-edit-id');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Salvar';
+        await carregar();
+        render();
+      }
     } catch (e) {
       if (msgEl) { msgEl.textContent = 'Erro ao comunicar com o servidor.'; msgEl.style.color = '#e74c3c'; }
     }
