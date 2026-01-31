@@ -68,7 +68,7 @@ window.showToast = (msg = '') => {
       }
 
       // Guarda o usuário e vai para a Home
-      try { localStorage.setItem('sgv:user', JSON.stringify(data)); } catch {}
+      try { localStorage.setItem('sgv_usuario_logado', JSON.stringify(data)); } catch {}
       window.location.href = '/home.html';
     } catch (err) {
       showToast('Falha ao conectar. Tente novamente.');
