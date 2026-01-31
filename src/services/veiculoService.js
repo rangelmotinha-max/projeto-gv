@@ -31,7 +31,7 @@ async function listar() {
   const ids = rows.map((r) => r.id);
   const placeholders = ids.map(() => '?').join(',');
   const [fotos] = await db.query(
-    `SELECT veiculo_id AS veiculoId, caminho, nome_arquivo AS nome
+    `SELECT id, veiculo_id AS veiculoId, caminho, nome_arquivo AS nome
      FROM veiculo_fotos
      WHERE veiculo_id IN (${placeholders})
      ORDER BY id DESC`,
@@ -42,7 +42,7 @@ async function listar() {
   for (const r of rows) map.set(r.id, []);
   for (const f of fotos) {
     const arr = map.get(f.veiculoId);
-    if (arr) arr.push({ url: f.caminho, nome: f.nome });
+    if (arr) arr.push({ id: f.id, url: f.caminho, nome: f.nome });
   }
 
   return rows.map((r) => ({ ...r, fotos: map.get(r.id) || [] }));
