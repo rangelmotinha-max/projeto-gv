@@ -38,14 +38,38 @@ async function listar() {
     ids
   );
 
+  const toWebUrl = (p) => {
+    let s = String(p || '').trim();
+    if (!s) return s;
+    s = s.replace(/\\/g, '/');
+    if (s.includes('/uploads/veiculos/')) {
+      const filename = s.split('/').pop();
+      return '/uploads/veiculos/' + filename;
+    }
+    if (s.startsWith('/uploads/')) {
+      const filename = s.split('/').pop();
+      return '/uploads/veiculos/' + filename;
+    }
+    if (/uploads/i.test(s)) {
+      const filename = s.split('/').pop();
+      return '/uploads/veiculos/' + filename;
+    }
+    const filename = s.split('/').pop();
+    return '/uploads/veiculos/' + filename;
+  };
+
   const map = new Map();
   for (const r of rows) map.set(r.id, []);
   for (const f of fotos) {
     const arr = map.get(f.veiculoId);
-    if (arr) arr.push({ id: f.id, url: f.caminho, nome: f.nome });
+    if (arr) arr.push({ id: f.id, url: toWebUrl(f.caminho), nome: f.nome });
   }
 
-  return rows.map((r) => ({ ...r, fotos: map.get(r.id) || [] }));
+  return rows.map((r) => ({
+    ...r,
+    manualPath: r.manualPath ? toWebUrl(r.manualPath) : r.manualPath,
+    fotos: map.get(r.id) || [],
+  }));
 }
 
 async function criar(payload) {
