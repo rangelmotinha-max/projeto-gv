@@ -1006,6 +1006,7 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
   const elBaixados = document.getElementById('metric-veiculos-baixados');
   const elOficina = document.getElementById('metric-veiculos-oficina');
   const elBase = document.getElementById('metric-veiculos-base');
+  const tableContainer = document.getElementById('home-vehicles-table');
 
   if (!elTotal && !elBaixados && !elOficina && !elBase) return; // não está na home
 
@@ -1028,8 +1029,58 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
       const base = (lista || []).filter(v => String(v.status).toUpperCase() === 'BASE').length;
 
       setAll(total, baixados, oficina, base);
+
+      // Renderiza a tabela de veículos na Home, se existir container
+      if (tableContainer) {
+        if (!Array.isArray(lista) || !lista.length) {
+          tableContainer.innerHTML = '<p style="font-size:14px;color:#6c757d;">Nenhum veículo cadastrado.</p>';
+        } else {
+          const linhas = lista
+            .map((v) => {
+              const status = String(v.status || '').toUpperCase();
+              const statusLabel =
+                status === 'BAIXADA' ? 'Baixada' : status === 'OFICINA' ? 'Oficina' : status === 'ATIVA' ? 'Ativa' : 'Base';
+              const statusCls =
+                status === 'BAIXADA' ? 'status-baixada' : status === 'OFICINA' ? 'status-oficina' : status === 'ATIVA' ? 'status-ativa' : 'status-base';
+              return `
+                <tr>
+                  <td>${v.marcaModelo || '-'}</td>
+                  <td>${v.cor || '-'}</td>
+                  <td>${v.prefixo || '-'}</td>
+                  <td>${v.placaVinculada || '-'}</td>
+                  <td>${v.condutorAtual || '-'}</td>
+                  <td><span class="${statusCls}">${statusLabel}</span></td>
+                  <td>${(v.kmAtual ?? '-') }</td>
+                  <td>${(v.proximaRevisaoKm ?? '-') }</td>
+                </tr>
+              `;
+            })
+            .join('');
+
+          tableContainer.innerHTML = `
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Marca/Modelo</th>
+                  <th>Cor</th>
+                  <th>Prefixo</th>
+                  <th>Placa Vinculada</th>
+                  <th>Condutor</th>
+                  <th>Status</th>
+                  <th>Km atual</th>
+                  <th>Km Revisão</th>
+                </tr>
+              </thead>
+              <tbody>${linhas}</tbody>
+            </table>
+          `;
+        }
+      }
     } catch (e) {
       setAll('-', '-', '-', '-');
+      if (tableContainer) {
+        tableContainer.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Falha ao carregar dados de veículos.</p>';
+      }
     }
   })();
 })();
