@@ -3,29 +3,35 @@ const db = require('../config/db');
 async function listar() {
   const [rows] = await db.query(
     `SELECT
-       id,
-       marca_modelo AS marcaModelo,
-       ano_fabricacao AS anoFabricacao,
-       prefixo,
-       placa,
-       placa_vinculada AS placaVinculada,
-       unidade,
-       cor,
-       km_atual AS kmAtual,
-       proxima_revisao_km AS proximaRevisaoKm,
-       data_proxima_revisao AS dataProximaRevisao,
-       condutor_atual AS condutorAtual,
-       cartao,
-       os_cman AS osCman,
-       os_prime AS osPrime,
-       observacoes,
-       manual_path AS manualPath,
-       manual_nome AS manualNome,
-       status,
-       created_at AS createdAt,
-       updated_at AS updatedAt
-     FROM veiculos
-     ORDER BY id DESC`
+       v.id,
+       v.marca_modelo AS marcaModelo,
+       v.ano_fabricacao AS anoFabricacao,
+       v.prefixo,
+       v.placa,
+       v.placa_vinculada AS placaVinculada,
+       v.unidade,
+       v.cor,
+       v.km_atual AS kmAtual,
+       v.proxima_revisao_km AS proximaRevisaoKm,
+       v.data_proxima_revisao AS dataProximaRevisao,
+       v.condutor_atual AS condutorAtual,
+       v.cartao,
+       v.os_cman AS osCman,
+       v.os_prime AS osPrime,
+       v.observacoes,
+       v.manual_path AS manualPath,
+       v.manual_nome AS manualNome,
+       v.status,
+       v.created_at AS createdAt,
+       v.updated_at AS updatedAt,
+       (
+         SELECT valor FROM veiculo_saldo_historico sh
+         WHERE sh.veiculo_id = v.id
+         ORDER BY sh.data_leitura DESC, sh.id DESC
+         LIMIT 1
+       ) AS saldoAtual
+     FROM veiculos v
+     ORDER BY v.id DESC`
   );
 
   if (!rows.length) return rows.map((r) => ({ ...r, fotos: [] }));

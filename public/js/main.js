@@ -1035,6 +1035,10 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
         if (!Array.isArray(lista) || !lista.length) {
           tableContainer.innerHTML = '<p style="font-size:14px;color:#6c757d;">Nenhum veículo cadastrado.</p>';
         } else {
+          const formatCurrencyBR = (val) => {
+            try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val || 0)); } catch { return String(val ?? '-'); }
+          };
+
           const linhas = lista
             .map((v) => {
               const status = String(v.status || '').toUpperCase();
@@ -1048,6 +1052,7 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
               const warnHtml = showWarn
                 ? ' <span class="warn-icon" title="baixar vtr" aria-label="baixar vtr"><i class="fa-solid fa-triangle-exclamation"></i></span>'
                 : '';
+              const saldoHtml = (v.saldoAtual !== undefined && v.saldoAtual !== null) ? formatCurrencyBR(v.saldoAtual) : '-';
               return `
                 <tr>
                   <td>${v.marcaModelo || '-'}</td>
@@ -1058,6 +1063,7 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
                   <td><span class="${statusCls}">${statusLabel}</span></td>
                   <td>${(v.kmAtual ?? '-') }</td>
                   <td>${(v.proximaRevisaoKm ?? '-') }${warnHtml}</td>
+                  <td>${saldoHtml}</td>
                 </tr>
               `;
             })
@@ -1075,6 +1081,7 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
                   <th>Status</th>
                   <th>Km atual</th>
                   <th>Km Revisão</th>
+                  <th>Saldo</th>
                 </tr>
               </thead>
               <tbody>${linhas}</tbody>
