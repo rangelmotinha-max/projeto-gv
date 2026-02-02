@@ -99,6 +99,14 @@ if (forgotPasswordLink && forgotPasswordModal) {
   const pdfBtn = document.getElementById('report-pdf');
   const tableContainer = document.getElementById('report-table-container');
   const msgEl = document.getElementById('report-message');
+  const periodSelect = document.getElementById('filter-period');
+  const chartCanvas = document.getElementById('km-chart');
+  let kmChart = null;
+
+  // Esconde a tabela de resultados até o usuário gerar o relatório
+  if (tableContainer) {
+    tableContainer.style.display = 'none';
+  }
 
   const elTotal = document.getElementById('report-total');
   const elBase = document.getElementById('report-base');
@@ -128,6 +136,20 @@ if (forgotPasswordLink && forgotPasswordModal) {
       lista = [];
       if (msgEl) { msgEl.textContent = 'Erro ao carregar dados.'; msgEl.style.color = '#e74c3c'; }
     }
+  };
+
+  const toSqlTs = (d) => new Date(d).toISOString().slice(0,19).replace('T',' ');
+
+  const getPeriodRange = (key) => {
+    const end = new Date();
+    const start = new Date(end);
+    const subMonths = (m) => { start.setMonth(start.getMonth() - m); };
+    if (key === 'semanal') start.setDate(start.getDate() - 7);
+    else if (key === 'mensal') subMonths(1);
+    else if (key === 'trimestre') subMonths(3);
+    else if (key === 'semestre') subMonths(6);
+    else if (key === 'anual') subMonths(12);
+    return { inicio: toSqlTs(start), fim: toSqlTs(end) };
   };
 
   const getFilters = () => {
@@ -163,6 +185,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
 
   const renderTabela = (data) => {
     if (!tableContainer) return;
+    // Exibe o container quando o relatório for gerado
+    tableContainer.style.display = 'block';
     if (!data.length) {
       tableContainer.innerHTML = '<p style="font-size:14px;color:#6c757d;">Nenhum veículo encontrado com os filtros selecionados.</p>';
       return;
@@ -209,6 +233,58 @@ if (forgotPasswordLink && forgotPasswordModal) {
       `;
   };
 
+  const carregarKmPeriodo = async (veiculos, periodKey) => {
+    const { inicio, fim } = getPeriodRange(periodKey || 'mensal');
+    const results = await Promise.all(
+      (veiculos || []).map(async (v) => {
+        const label = v.marcaModelo || v.prefixo || v.placa || `#${v.id}`;
+        if (!v.id) return { label, km: 0 };
+        try {
+          const url = `/api/v1/veiculos/${v.id}/kms/medias?inicio=${encodeURIComponent(inicio)}&fim=${encodeURIComponent(fim)}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Falha ao obter médias');
+          const data = await res.json();
+          return { label, km: Number(data?.deltaKm || 0) };
+        } catch (err) {
+          console.warn('KM período erro:', err);
+          return { label, km: 0 };
+        }
+      })
+    );
+    return results;
+  };
+
+  const renderGrafico = async () => {
+    if (!chartCanvas) return;
+    const periodKey = periodSelect?.value || 'mensal';
+    if (msgEl) { msgEl.textContent = 'Calculando gráfico...'; msgEl.style.color = '#495057'; }
+    const dados = await carregarKmPeriodo(ultimoResultado, periodKey);
+    const ordenados = dados.sort((a,b) => b.km - a.km);
+    const labels = ordenados.map(d => d.label);
+    const values = ordenados.map(d => d.km);
+    if (kmChart) { kmChart.destroy(); kmChart = null; }
+    if (!labels.length) {
+      if (msgEl) { msgEl.textContent = 'Nenhum veículo para o gráfico no período selecionado.'; msgEl.style.color = '#6c757d'; }
+      return;
+    }
+    chartCanvas.style.height = `${Math.min(ordenados.length * 28, 600)}px`;
+    kmChart = new Chart(chartCanvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Km no período', data: values, backgroundColor: '#495ED4' }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: 'Km' }, ticks: { precision: 0 } },
+          y: { title: { display: true, text: 'Marca/Modelo' } }
+        },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} km` } } }
+      }
+    });
+    if (msgEl) msgEl.textContent = '';
+  };
+
   const gerar = async () => {
     if (msgEl) { msgEl.textContent = ''; msgEl.style.color = '#495057'; }
     if (!lista.length) await carregar();
@@ -216,6 +292,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     ultimoResultado = (lista || []).filter(v => aplica(v, f));
     atualizarResumo(ultimoResultado);
     renderTabela(ultimoResultado);
+    await renderGrafico();
   };
 
   const gerarPDF = () => {
@@ -291,8 +368,13 @@ if (forgotPasswordLink && forgotPasswordModal) {
     });
   }
 
-  // Gera relatório inicial sem filtros
-  gerar();
+  if (periodSelect) {
+    periodSelect.addEventListener('change', async () => {
+      await renderGrafico();
+    });
+  }
+
+  // Não gerar automaticamente: usuário deve clicar em "Gerar Relatório"
 })();
 
 // ===== Cadastro de Veículo: salvar, listar, editar e excluir =====

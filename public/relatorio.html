@@ -85,6 +85,18 @@
                 <input type="text" id="filter-prefixo" placeholder="ex.: 4599" />
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="filter-period">Período</label>
+                <select id="filter-period">
+                  <option value="semanal">Semanal</option>
+                  <option value="mensal" selected>Mensal</option>
+                  <option value="trimestre">Trimestre</option>
+                  <option value="semestre">Semestre</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </div>
+            </div>
 
             <div id="report-message" class="form-message"></div>
 
@@ -110,12 +122,21 @@
           <h2 class="section-title">Resultados</h2>
           <div id="report-table-container"></div>
         </section>
+
+        <section class="section-block">
+          <h2 class="section-title">Gráfico KM por Período</h2>
+          <div style="height:420px">
+            <canvas id="km-chart"></canvas>
+          </div>
+        </section>
       </main>
     </div>
 
     <!-- jsPDF e AutoTable para exportação em PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/main.js"></script>
   </body>
 </html>
