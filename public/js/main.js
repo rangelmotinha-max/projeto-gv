@@ -1827,9 +1827,9 @@ if (userForm) {
         return;
       }
 
-      if (typeof showToast === 'function') showToast('KM registrado com sucesso');
+      window.alert('Km registrado com sucesso!');
       if (inputKm) inputKm.value = '';
-      if (msgEl) { msgEl.textContent = 'KM registrado com sucesso.'; msgEl.style.color = '#2ecc71'; }
+      if (msgEl) { msgEl.textContent = ''; }
 
       await carregarVeiculos();
       const v2 = encontrarVeiculo(ref);
