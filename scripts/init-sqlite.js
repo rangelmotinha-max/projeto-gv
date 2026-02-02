@@ -38,6 +38,26 @@ dotenv.config();
       console.log(`[sqlite:init] OK: ${file}`);
     }
 
+    // Executa migrações, se existirem
+    const migrationsDir = path.join(sqlDir, 'migrations');
+    if (fs.existsSync(migrationsDir)) {
+      const migs = fs
+        .readdirSync(migrationsDir)
+        .filter((f) => f.toLowerCase().endsWith('.sql'))
+        .sort();
+      for (const m of migs) {
+        const full = path.join(migrationsDir, m);
+        const sql = fs.readFileSync(full, 'utf8');
+        if (!sql.trim()) {
+          console.log(`[sqlite:init] (pulado) migração ${m} vazia.`);
+          continue;
+        }
+        console.log(`[sqlite:init] Executando migração ${m}...`);
+        await db.exec(sql);
+        console.log(`[sqlite:init] OK migração: ${m}`);
+      }
+    }
+
     await db.close();
     console.log('[sqlite:init] Finalizado com sucesso.');
     process.exit(0);

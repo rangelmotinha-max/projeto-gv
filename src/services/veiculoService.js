@@ -10,6 +10,7 @@ async function listar() {
        placa,
        placa_vinculada AS placaVinculada,
        unidade,
+       cor,
        km_atual AS kmAtual,
        proxima_revisao_km AS proximaRevisaoKm,
        data_proxima_revisao AS dataProximaRevisao,
@@ -17,6 +18,7 @@ async function listar() {
        cartao,
        os_cman AS osCman,
        os_prime AS osPrime,
+       observacoes,
        manual_path AS manualPath,
        manual_nome AS manualNome,
        status,
@@ -76,9 +78,9 @@ async function criar(payload) {
   const sql = `
     INSERT INTO veiculos
       (marca_modelo, ano_fabricacao, prefixo, placa, placa_vinculada, unidade,
-       km_atual, proxima_revisao_km, data_proxima_revisao,
-       condutor_atual, cartao, os_cman, os_prime, manual_path, manual_nome, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       cor, km_atual, proxima_revisao_km, data_proxima_revisao,
+       condutor_atual, cartao, os_cman, os_prime, observacoes, manual_path, manual_nome, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
     payload.marcaModelo,
@@ -87,6 +89,7 @@ async function criar(payload) {
     payload.placa,
     payload.placaVinculada,
     payload.unidade,
+    payload.cor || null,
     payload.kmAtual,
     payload.proximaRevisaoKm,
     payload.dataProximaRevisao,
@@ -94,6 +97,7 @@ async function criar(payload) {
     payload.cartao,
     payload.osCman,
     payload.osPrime,
+    payload.observacoes || null,
     payload.manualPath || null,
     payload.manualNome || null,
     payload.status,
@@ -107,9 +111,9 @@ async function criarComFotos(payload, fotos = []) {
   const sql = `
     INSERT INTO veiculos
       (marca_modelo, ano_fabricacao, prefixo, placa, placa_vinculada, unidade,
-       km_atual, proxima_revisao_km, data_proxima_revisao,
-       condutor_atual, cartao, os_cman, os_prime, manual_path, manual_nome, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       cor, km_atual, proxima_revisao_km, data_proxima_revisao,
+       condutor_atual, cartao, os_cman, os_prime, observacoes, manual_path, manual_nome, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
     payload.marcaModelo,
@@ -118,6 +122,7 @@ async function criarComFotos(payload, fotos = []) {
     payload.placa,
     payload.placaVinculada,
     payload.unidade,
+    payload.cor || null,
     payload.kmAtual,
     payload.proximaRevisaoKm,
     payload.dataProximaRevisao,
@@ -125,6 +130,7 @@ async function criarComFotos(payload, fotos = []) {
     payload.cartao,
     payload.osCman,
     payload.osPrime,
+    payload.observacoes || null,
     payload.manualPath || null,
     payload.manualNome || null,
     payload.status,
@@ -161,6 +167,7 @@ async function atualizar(id, payload) {
     'placa = ?',
     'placa_vinculada = ?',
     'unidade = ?',
+    'cor = ?',
     'km_atual = ?',
     'proxima_revisao_km = ?',
     'data_proxima_revisao = ?',
@@ -168,6 +175,7 @@ async function atualizar(id, payload) {
     'cartao = ?',
     'os_cman = ?',
     'os_prime = ?',
+    'observacoes = ?',
     'status = ?',
     'updated_at = CURRENT_TIMESTAMP',
   ];
@@ -178,6 +186,7 @@ async function atualizar(id, payload) {
     payload.placa,
     payload.placaVinculada,
     payload.unidade,
+    payload.cor || null,
     payload.kmAtual,
     payload.proximaRevisaoKm,
     payload.dataProximaRevisao,
@@ -185,6 +194,7 @@ async function atualizar(id, payload) {
     payload.cartao,
     payload.osCman,
     payload.osPrime,
+    payload.observacoes || null,
     payload.status,
   ];
 

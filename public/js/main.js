@@ -741,10 +741,14 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-placa').value = v.placa || '';
         document.getElementById('veic-placa-vinculada').value = v.placaVinculada || '';
         document.getElementById('veic-unidade').value = v.unidade || '';
+        const corEl = document.getElementById('veic-cor');
+        if (corEl) corEl.value = v.cor || '';
         document.getElementById('veic-km-atual').value = v.kmAtual ?? '';
         document.getElementById('veic-prox-rev-km').value = v.proximaRevisaoKm ?? '';
         document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
         document.getElementById('veic-condutor').value = v.condutorAtual || '';
+        const obsEl = document.getElementById('veic-observacoes');
+        if (obsEl) obsEl.value = v.observacoes || '';
         const cartaoInput = document.getElementById('veic-cartao');
         if (cartaoInput) {
           if (v.cartao && typeof v.cartao === 'string') {
@@ -784,10 +788,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const placa = document.getElementById('veic-placa').value.trim().toUpperCase();
     const placaVinculada = document.getElementById('veic-placa-vinculada').value.trim().toUpperCase();
     const unidade = document.getElementById('veic-unidade').value.trim();
+    const cor = (document.getElementById('veic-cor')?.value || '').trim();
     const kmAtual = Number(toDigits(document.getElementById('veic-km-atual').value));
     const proximaRevisaoKm = Number(toDigits(document.getElementById('veic-prox-rev-km').value));
     const dataProximaRevisao = document.getElementById('veic-data-prox-rev').value;
     const condutorAtual = document.getElementById('veic-condutor').value.trim();
+    const observacoes = (document.getElementById('veic-observacoes')?.value || '').trim();
     const cartaoInput = document.getElementById('veic-cartao');
     const cartaoDigits = (cartaoInput?.value || '').replace(/\D/g, '');
     if (cartaoDigits.length !== 16) erros.push('Informe o Cartão com 16 dígitos.');
@@ -817,10 +823,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
     fd.append('placa', placa);
     fd.append('placaVinculada', placaVinculada);
     fd.append('unidade', unidade);
+    fd.append('cor', cor);
     fd.append('kmAtual', String(kmAtual));
     fd.append('proximaRevisaoKm', String(proximaRevisaoKm));
     if (dataProximaRevisao) fd.append('dataProximaRevisao', dataProximaRevisao);
     fd.append('condutorAtual', condutorAtual);
+    fd.append('observacoes', observacoes);
     fd.append('cartao', cartaoDigits);
     fd.append('osCman', osCman);
     fd.append('osPrime', osPrime);

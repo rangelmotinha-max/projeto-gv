@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS veiculos (
   os_cman TEXT,
   os_prime TEXT,
 
+  cor TEXT,
+  observacoes TEXT,
+
   manual_path TEXT,
   manual_nome TEXT,
 
@@ -43,6 +46,9 @@ CREATE TABLE IF NOT EXISTS veiculos (
 
   os_cman TEXT,
   os_prime TEXT,
+
+  cor TEXT,
+  observacoes TEXT,
 
   manual_path TEXT,
   manual_nome TEXT,

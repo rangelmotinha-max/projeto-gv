@@ -57,9 +57,13 @@
         <section class="form-card">
           <form id="vehicle-form">
             <div class="form-row">
-              <div class="form-field full-width">
+              <div class="form-field">
                 <label for="veic-marca-modelo">Marca/Modelo:</label>
                 <input type="text" id="veic-marca-modelo" required />
+              </div>
+              <div class="form-field">
+                <label for="veic-cor">Cor</label>
+                <input type="text" id="veic-cor" />
               </div>
             </div>
 
@@ -142,6 +146,13 @@
                   <option value="OFICINA">Oficina</option>
                   <option value="ATIVA">Ativa</option>
                 </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field full-width">
+                <label for="veic-observacoes">Observações</label>
+                <textarea id="veic-observacoes" rows="3"></textarea>
               </div>
             </div>
 
