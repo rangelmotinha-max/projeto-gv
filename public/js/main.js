@@ -67,9 +67,10 @@ window.showToast = (msg = '') => {
         return;
       }
 
-      // Guarda o usuário e vai para a Home
+      // Guarda o usuário e redireciona conforme perfil
       try { localStorage.setItem('sgv_usuario_logado', JSON.stringify(data)); } catch {}
-      window.location.href = '/home.html';
+      const dest = data?.perfil === 'EDITOR' ? '/lancar-km.html' : '/home.html';
+      window.location.href = dest;
     } catch (err) {
       showToast('Falha ao conectar. Tente novamente.');
     } finally {
@@ -1109,6 +1110,25 @@ if (menuItems && menuItems.length) {
   });
 }
 
+// Restrição de menus por perfil (EDITOR vê apenas Lançar KM e Lançar Saldo)
+(() => {
+  try {
+    const raw = localStorage.getItem('sgv_usuario_logado');
+    const usuario = raw ? JSON.parse(raw) : null;
+    const perfil = usuario?.perfil || null;
+    if (perfil !== 'EDITOR') return;
+
+    const links = document.querySelectorAll('.sidebar .menu-item');
+    links.forEach((a) => {
+      const href = String(a.getAttribute('href') || '');
+      const allowed = href.endsWith('/lancar-km.html') || href.endsWith('/lancar-saldo.html');
+      if (!allowed) {
+        a.style.display = 'none';
+      }
+    });
+  } catch {}
+})();
+
 // Utilitário para obter o usuário logado do localStorage
 const getUsuarioLogado = () => {
   try {
@@ -1190,8 +1210,10 @@ if (btnLogout) {
     } catch (e) {
       // se localStorage não estiver disponível, apenas segue
     }
-
-    window.location.href = '/index.html';
+    // limpa cookie de sessão no back-end
+    fetch('/api/v1/logout', { method: 'POST' }).finally(() => {
+      window.location.href = '/index.html';
+    });
   });
 }
 

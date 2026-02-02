@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { setLoginCookie, clearLoginCookie } = require('../middlewares/auth');
 
 async function login(req, res, next) {
   try {
@@ -55,6 +56,14 @@ async function login(req, res, next) {
     }
 
     console.log('[auth] login OK', { id: usuario.id, matricula: usuario.matricula, condicao, resultado: true });
+    // Define cookie de sessão assinado (HttpOnly)
+    setLoginCookie(res, {
+      id: usuario.id,
+      nome: usuario.nome,
+      matricula: usuario.matricula,
+      posto: usuario.posto,
+      perfil: usuario.perfil,
+    });
     res.json({
       id: usuario.id,
       nome: usuario.nome,
@@ -67,6 +76,16 @@ async function login(req, res, next) {
   }
 }
 
+async function logout(req, res, next) {
+  try {
+    clearLoginCookie(res);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   login,
+  logout,
 };
