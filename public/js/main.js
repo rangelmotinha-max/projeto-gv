@@ -683,6 +683,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
       <tr>
         <td>${v.placaVinculada || '-'}</td>
         <td>${v.marcaModelo} (${v.anoFabricacao})</td>
+        <td>${v.cor || '-'}</td>
         <td>${v.condutorAtual || '-'}</td>
         <td><span class="${sv.cls}">${sv.label}</span></td>
         <td class="user-actions">
@@ -700,6 +701,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
           <tr>
             <th>Placa Vinculada</th>
             <th>Veículo</th>
+            <th>Cor</th>
             <th>Condutor</th>
             <th>Status</th>
             <th style="width:120px;">Ações</th>
