@@ -407,14 +407,16 @@ if (forgotPasswordLink && forgotPasswordModal) {
         document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
         document.getElementById('veic-condutor').value = v.condutorAtual || '';
         const cartaoInput = document.getElementById('veic-cartao');
-        if (v.cartao && typeof v.cartao === 'string' && v.cartao.length === 16) {
-          // Mostra apenas os 4 últimos dígitos editáveis
-          cartaoInput.value = '4599.0000.0000.' + v.cartao.slice(12);
-        } else {
-          cartaoInput.value = '4599.0000.0000.';
-        }
-        if (cartaoInput && typeof cartaoInput._updateCardOverlay === 'function') {
-          cartaoInput._updateCardOverlay();
+        if (cartaoInput) {
+          if (v.cartao && typeof v.cartao === 'string') {
+            const digits = v.cartao.replace(/\D/g, '').slice(0, 16);
+            cartaoInput.value = (digits.match(/.{1,4}/g) || []).join('.').slice(0, 19);
+          } else {
+            cartaoInput.value = '';
+          }
+          if (typeof cartaoInput._updateCardOverlay === 'function') {
+            cartaoInput._updateCardOverlay();
+          }
         }
         document.getElementById('veic-os-cman').value = v.osCman || '';
         document.getElementById('veic-os-prime').value = v.osPrime || '';
@@ -447,15 +449,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const proximaRevisaoKm = Number(toDigits(document.getElementById('veic-prox-rev-km').value));
     const dataProximaRevisao = document.getElementById('veic-data-prox-rev').value;
     const condutorAtual = document.getElementById('veic-condutor').value.trim();
-    // Cartão: só permite digitar os 4 últimos dígitos, prefixo fixo
     const cartaoInput = document.getElementById('veic-cartao');
-    let cartao = cartaoInput.value.trim();
-    // Remove tudo que não for número
-    cartao = cartao.replace(/\D/g, '');
-    // Garante que o valor tenha pelo menos 4 dígitos finais
-    let ultimos4 = cartao.slice(-4);
-    if (ultimos4.length < 4) ultimos4 = ultimos4.padStart(4, '0');
-    cartao = '459900000000' + ultimos4;
+    const cartaoDigits = (cartaoInput?.value || '').replace(/\D/g, '');
+    if (cartaoDigits.length !== 16) erros.push('Informe o Cartão com 16 dígitos.');
     const osCman = document.getElementById('veic-os-cman').value.trim();
     const osPrime = document.getElementById('veic-os-prime').value.trim();
     const status = document.getElementById('veic-status').value;
@@ -486,7 +482,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     fd.append('proximaRevisaoKm', String(proximaRevisaoKm));
     if (dataProximaRevisao) fd.append('dataProximaRevisao', dataProximaRevisao);
     fd.append('condutorAtual', condutorAtual);
-    fd.append('cartao', cartao);
+    fd.append('cartao', cartaoDigits);
     fd.append('osCman', osCman);
     fd.append('osPrime', osPrime);
     fd.append('status', status);
@@ -613,61 +609,42 @@ if (forgotPasswordForm) {
 const apenasDigitos = (valor) => valor.replace(/\D/g, '');
 
 // Máscara e destaque do campo Cartão (xxxx.xxxx.xxxx.xxxx) — últimos 4 dígitos em azul
-// Máscara e destaque do campo Cartão (4599.0000.0000.____)
 (function () {
   const input = document.getElementById('veic-cartao');
   const overlaySpan = document.querySelector('.card-input-wrapper .card-text');
   if (!input || !overlaySpan) return;
 
-  // Bloqueia edição dos 12 primeiros dígitos
-  input.addEventListener('keydown', function (e) {
-    const pos = input.selectionStart;
-    // Permite navegação, backspace/delete, tab, etc
-    if ([8, 9, 37, 39, 46].includes(e.keyCode)) return;
-    // Só permite digitar nos últimos 4 dígitos
-    if (pos < 15) {
-      e.preventDefault();
-    }
-    // Só permite números
-    if (!/\d/.test(e.key) && e.key.length === 1) {
-      e.preventDefault();
-    }
-  });
+  const onlyDigits = (s) => (s || '').replace(/\D/g, '').slice(0, 16);
+  const formatGroups = (s) => (s.match(/.{1,4}/g) || []).join('.');
+  const PAD = '________________'; // 16 underscores
 
-  // Valor padrão ao focar
-  input.addEventListener('focus', function () {
-    if (!input.value || input.value.length < 19) {
-      input.value = '4599.0000.0000.';
-      update();
-      setTimeout(() => input.setSelectionRange(15, 19), 0);
-    }
-  });
-
-  // Seleção automática dos últimos 4 dígitos ao clicar
-  input.addEventListener('click', function () {
-    if (input.selectionStart < 15) {
-      input.setSelectionRange(15, 19);
-    }
-  });
-
-  // Atualiza overlay
   const update = () => {
-    let val = input.value.replace(/\D/g, '');
-    if (val.length < 12) val = '459900000000';
-    const last4 = val.slice(-4);
-    overlaySpan.innerHTML = '4599.0000.0000.' + '<span class="last4">' + last4.padStart(4, '_') + '</span>';
+    const digits = onlyDigits(input.value);
+    input.value = formatGroups(digits);
+    const padded = (digits + PAD).slice(0, 16);
+    const g1 = padded.slice(0, 4);
+    const g2 = padded.slice(4, 8);
+    const g3 = padded.slice(8, 12);
+    const g4 = padded.slice(12, 16);
+    overlaySpan.innerHTML = `${g1}.${g2}.${g3}.<span class="last4">${g4}</span>`;
   };
+
   input._updateCardOverlay = update;
+
   input.addEventListener('input', update);
+  input.addEventListener('keydown', (e) => {
+    const allow = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+    if (allow.includes(e.key)) return;
+    if (!/\d/.test(e.key)) e.preventDefault();
+  });
   input.addEventListener('paste', (e) => {
     e.preventDefault();
-    const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
-    const digits = paste.replace(/\D/g, '').slice(-4);
-    input.value = '4599.0000.0000.' + digits;
+    const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const digits = onlyDigits(text);
+    input.value = formatGroups(digits);
     update();
-    setTimeout(() => input.setSelectionRange(15, 19), 0);
   });
-  // Inicializa
+
   update();
 })();
 
