@@ -62,8 +62,33 @@
           </div>
         </header>
 
-        <section class="section-block">
-          <p style="color:#6c757d;">Em desenvolvimento.</p>
+        <section class="form-card">
+          <form id="saldo-form">
+            <div class="form-row">
+              <div class="form-field">
+                <label for="saldo-ref">Placa / Placa Vinculada / Prefixo</label>
+                <div style="position: relative;">
+                  <input type="text" id="saldo-ref" placeholder="ABC1D23, ABC-1234 ou PRF-001" autocomplete="off" required />
+                  <div id="saldo-suggestions" style="position:absolute; z-index: 10; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-top:none; display:none; max-height:220px; overflow:auto;"></div>
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="saldo-valor">Saldo (R$)</label>
+                <input type="text" id="saldo-valor" inputmode="decimal" placeholder="Ex.: 150,00" required />
+              </div>
+            </div>
+            <div id="saldo-form-message" class="form-message"></div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Salvar Saldo</button>
+            </div>
+          </form>
+
+          <div id="saldo-match-info" class="section-block" style="display:none; margin-top: 12px;"></div>
+        </section>
+
+        <section class="section-block" id="saldo-history-section" style="display:none; margin-top: 12px;">
+          <h3 class="section-title">Últimos 10 saldos lançados</h3>
+          <div id="saldo-history"></div>
         </section>
       </main>
     </div>

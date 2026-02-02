@@ -1841,3 +1841,259 @@ if (userForm) {
     }
   });
 })();
+
+// ===== Lançar Saldo =====
+(() => {
+  const form = document.getElementById('saldo-form');
+  if (!form) return; // só na página lancar-saldo
+
+  const inputRef = document.getElementById('saldo-ref');
+  const suggBox = document.getElementById('saldo-suggestions');
+  const inputSaldo = document.getElementById('saldo-valor');
+  const msgEl = document.getElementById('saldo-form-message');
+  const matchInfo = document.getElementById('saldo-match-info');
+  const historySection = document.getElementById('saldo-history-section');
+  const historyBox = document.getElementById('saldo-history');
+
+  let veiculos = [];
+
+  const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  const carregarVeiculos = async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      veiculos = await res.json();
+    } catch (e) {
+      console.error(e);
+      veiculos = [];
+    }
+  };
+
+  const encontrarVeiculo = (refRaw) => {
+    const n = norm(refRaw);
+    if (!n) return null;
+    return (veiculos || []).find(v =>
+      norm(v.placa) === n ||
+      norm(v.placaVinculada) === n ||
+      norm(v.prefixo) === n
+    ) || null;
+  };
+
+  const renderMatch = (v) => {
+    if (!matchInfo) return;
+    if (!v) {
+      matchInfo.style.display = 'none';
+      matchInfo.innerHTML = '';
+      return;
+    }
+    matchInfo.style.display = 'block';
+    matchInfo.innerHTML = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>Veículo</label>
+          <div>${v.marcaModelo || '-'} (${v.anoFabricacao || '-'})</div>
+        </div>
+        <div class="form-field">
+          <label>Prefixo</label>
+          <div>${v.prefixo || '-'}</div>
+        </div>
+        <div class="form-field">
+          <label>Placa</label>
+          <div>${v.placa || '-'}${v.placaVinculada ? ' / ' + v.placaVinculada : ''}</div>
+        </div>
+        <div class="form-field">
+          <label>Km atual</label>
+          <div>${v.kmAtual ?? '-'}</div>
+        </div>
+        <div class="form-field">
+          <label>Saldo atual</label>
+          <div id="saldo-atual">-</div>
+        </div>
+      </div>
+    `;
+  };
+
+  const buildSuggestions = (termRaw) => {
+    if (!suggBox) return;
+    const term = norm(termRaw || '');
+    if (!term) {
+      suggBox.style.display = 'none';
+      suggBox.innerHTML = '';
+      return;
+    }
+    const items = [];
+    for (const v of veiculos || []) {
+      const keys = [v.placa, v.placaVinculada, v.prefixo].filter(Boolean);
+      for (const key of keys) {
+        const k = String(key);
+        if (norm(k).includes(term)) {
+          items.push({ key: k, label: `${k} — ${v.marcaModelo || ''} ${v.prefixo ? '(' + v.prefixo + ')' : ''}`.trim(), v });
+          break;
+        }
+      }
+      if (items.length >= 12) break;
+    }
+    if (!items.length) {
+      suggBox.style.display = 'none';
+      suggBox.innerHTML = '';
+      return;
+    }
+    suggBox.innerHTML = items
+      .map((it) => `
+        <div class="saldo-sugg-item" data-key="${it.key.replace(/"/g,'&quot;')}" style="padding:8px 10px; cursor:pointer; border-top:1px solid #eee;">
+          ${it.label}
+        </div>
+      `)
+      .join('');
+    suggBox.style.display = 'block';
+
+    suggBox.querySelectorAll('.saldo-sugg-item').forEach((el) => {
+      el.addEventListener('mousedown', (e) => {
+        const key = el.getAttribute('data-key');
+        if (inputRef && key) {
+          inputRef.value = key;
+          suggBox.style.display = 'none';
+          const v = encontrarVeiculo(key);
+          renderMatch(v);
+        }
+        e.preventDefault();
+      });
+    });
+  };
+
+  carregarVeiculos();
+
+  if (inputRef) {
+    inputRef.addEventListener('input', () => buildSuggestions(inputRef.value));
+    inputRef.addEventListener('focus', () => buildSuggestions(inputRef.value));
+    inputRef.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (suggBox) suggBox.style.display = 'none';
+        const v = encontrarVeiculo(inputRef.value);
+        renderMatch(v);
+        if (!v && msgEl) { msgEl.textContent = 'Veículo não encontrado.'; msgEl.style.color = '#e74c3c'; }
+        else if (msgEl) { msgEl.textContent = ''; }
+      }, 120);
+    });
+  }
+
+  const parseSaldo = (raw) => {
+    const s = String(raw || '').trim();
+    if (!s) return NaN;
+    // Converte formato brasileiro: 1.234,56 -> 1234.56
+    const norm = s.replace(/\./g, '').replace(',', '.');
+    const val = Number(norm);
+    return val;
+  };
+
+  const formatCurrencyBR = (val) => {
+    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val || 0)); } catch { return String(val || 0); }
+  };
+
+  const formatDateTimeBR = (iso) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '-';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${yy} ${hh}:${mi}`;
+  };
+
+  const renderHistorico = async (veiculoId) => {
+    if (!historySection || !historyBox) return;
+    try {
+      const res = await fetch(`/api/v1/veiculos/${veiculoId}/saldos`);
+      if (!res.ok) throw new Error('Falha ao carregar histórico');
+      const rows = await res.json();
+      const ordenado = [...rows]
+        .sort((a,b) => {
+          const cmp = String(b.dataLeitura || '').localeCompare(String(a.dataLeitura || ''));
+          if (cmp !== 0) return cmp;
+          return (b.id||0) - (a.id||0);
+        })
+        .slice(0,10);
+      if (!ordenado.length) {
+        historyBox.innerHTML = '<p style="font-size:14px;color:#6c757d;">Sem registros.</p>';
+        historySection.style.display = 'block';
+        const elSaldo = document.getElementById('saldo-atual');
+        if (elSaldo) elSaldo.textContent = '-';
+        return;
+      }
+      const linhas = ordenado.map(r => `
+        <tr>
+          <td>${formatDateTimeBR(r.dataLeitura)}</td>
+          <td>${formatCurrencyBR(r.valor)}</td>
+          <td>${(r.origem || '').toString().toUpperCase()}</td>
+        </tr>
+      `).join('');
+      historyBox.innerHTML = `
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Saldo</th>
+              <th>Origem</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      `;
+      historySection.style.display = 'block';
+      const elSaldo = document.getElementById('saldo-atual');
+      const saldoAtual = ordenado[0]?.valor;
+      if (elSaldo) elSaldo.textContent = saldoAtual !== undefined ? formatCurrencyBR(saldoAtual) : '-';
+    } catch (e) {
+      console.error(e);
+      historyBox.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Erro ao carregar histórico.</p>';
+      historySection.style.display = 'block';
+    }
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msgEl) { msgEl.textContent = ''; msgEl.style.color = '#495057'; }
+
+    const ref = (inputRef?.value || '').trim();
+    const saldoVal = parseSaldo(inputSaldo?.value || '');
+
+    const erros = [];
+    if (!ref) erros.push('Informe a referência do veículo.');
+    if (!(saldoVal >= 0)) erros.push('Informe um saldo válido (ex.: 150,00).');
+    if (erros.length) {
+      if (msgEl) { msgEl.textContent = erros[0]; msgEl.style.color = '#e74c3c'; }
+      return;
+    }
+
+    if (!veiculos.length) await carregarVeiculos();
+    const v = encontrarVeiculo(ref);
+    renderMatch(v);
+    if (!v?.id) {
+      if (msgEl) { msgEl.textContent = 'Veículo não encontrado.'; msgEl.style.color = '#e74c3c'; }
+      return;
+    }
+
+    try {
+      // Integração com backend: registrar saldo
+      const res = await fetch(`/api/v1/veiculos/${v.id}/saldos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valor: saldoVal }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (msgEl) { msgEl.textContent = data?.message || 'Erro ao registrar saldo.'; msgEl.style.color = '#e74c3c'; }
+        return;
+      }
+      window.alert('Saldo lançado com sucesso');
+      if (inputSaldo) inputSaldo.value = '';
+      renderHistorico(v.id);
+    } catch (err) {
+      console.error(err);
+      if (msgEl) { msgEl.textContent = 'Falha ao comunicar com o servidor.'; msgEl.style.color = '#e74c3c'; }
+    }
+  });
+})();

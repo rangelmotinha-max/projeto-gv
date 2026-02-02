@@ -53,8 +53,12 @@ dotenv.config();
           continue;
         }
         console.log(`[sqlite:init] Executando migração ${m}...`);
-        await db.exec(sql);
-        console.log(`[sqlite:init] OK migração: ${m}`);
+        try {
+          await db.exec(sql);
+          console.log(`[sqlite:init] OK migração: ${m}`);
+        } catch (err) {
+          console.warn(`[sqlite:init] Aviso: migração ${m} falhou, seguindo adiante. Motivo: ${err?.message || err}`);
+        }
       }
     }
 

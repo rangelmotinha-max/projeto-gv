@@ -288,4 +288,32 @@ async function mediasKms(req, res, next) {
   }
 }
 
-module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms };
+// ===== Saldo =====
+async function adicionarSaldo(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { valor, dataLeitura } = req.body;
+    const valNum = Number(valor);
+    if (Number.isNaN(valNum) || valNum < 0) {
+      return res.status(400).json({ message: 'Informe um saldo válido.' });
+    }
+    await veiculoService.registrarLeituraSaldo(id, valNum, dataLeitura || null, 'MANUAL');
+    res.status(201).json({ veiculoId: Number(id), valor: valNum, dataLeitura: dataLeitura || new Date().toISOString() });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    next(e);
+  }
+}
+
+async function listarSaldos(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { inicio, fim } = req.query;
+    const rows = await veiculoService.listarLeiturasSaldo(id, inicio || null, fim || null);
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms, adicionarSaldo, listarSaldos };

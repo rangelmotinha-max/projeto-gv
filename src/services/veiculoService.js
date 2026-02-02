@@ -323,6 +323,29 @@ async function obterMediasKm(veiculoId, inicio = null, fim = null) {
   };
 }
 
+// ===== Histórico de Saldo =====
+async function registrarLeituraSaldo(veiculoId, valor, dataLeitura = null, origem = 'FORM') {
+  const sql = 'INSERT INTO veiculo_saldo_historico (veiculo_id, valor, data_leitura, origem) VALUES (?, ?, ?, ?)';
+  const when = dataLeitura ? new Date(dataLeitura) : new Date();
+  const ts = when.toISOString().slice(0, 19).replace('T', ' ');
+  await db.execute(sql, [veiculoId, valor, ts, origem]);
+}
+
+async function listarLeiturasSaldo(veiculoId, inicio = null, fim = null) {
+  const where = ['veiculo_id = ?'];
+  const params = [veiculoId];
+  if (inicio) { where.push('data_leitura >= ?'); params.push(inicio); }
+  if (fim) { where.push('data_leitura <= ?'); params.push(fim); }
+  const [rows] = await db.query(
+    `SELECT id, veiculo_id AS veiculoId, valor, data_leitura AS dataLeitura, origem, created_at AS createdAt
+     FROM veiculo_saldo_historico
+     WHERE ${where.join(' AND ')}
+     ORDER BY data_leitura DESC, id DESC`,
+    params
+  );
+  return rows;
+}
+
 module.exports = {
   listar,
   criar,
@@ -334,4 +357,6 @@ module.exports = {
   registrarLeituraKm,
   listarLeiturasKm,
   obterMediasKm,
+  registrarLeituraSaldo,
+  listarLeiturasSaldo,
 };
