@@ -106,6 +106,21 @@ if (forgotPasswordLink && forgotPasswordModal) {
   let veiculos = [];
   let editId = null; // id do veículo em edição
 
+  const searchInput = document.getElementById('veh-search');
+  let termoBusca = '';
+  const norm = (s) =>
+    String(s ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      termoBusca = searchInput.value || '';
+      render();
+    });
+  }
+
   const toDigits = (v = '') => v.replace(/\D/g, '');
   const validarPlacaBR = (placa) => {
     const p = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -338,20 +353,54 @@ if (forgotPasswordLink && forgotPasswordModal) {
       return;
     }
 
-    const linhas = veiculos.map((v, i) => {
-      const sv = getStatusView(v.status);
-      return `
+    const term = (termoBusca || '').trim();
+    const t = norm(term);
+
+    const base = veiculos.map((v, idx) => ({ v, idx }));
+    const data = t
+      ? base.filter(({ v }) => {
+          const combined = [
+            v.placa,
+            v.placaVinculada,
+            v.marcaModelo,
+            v.anoFabricacao,
+            v.unidade,
+            v.condutorAtual,
+            v.prefixo,
+            v.status,
+            v.osCman,
+            v.osPrime,
+            v.cartao,
+          ]
+            .map(norm)
+            .join(' ');
+          return combined.includes(t);
+        })
+      : base;
+
+    if (t && data.length === 0) {
+      listContainer.innerHTML = `<p style="font-size:14px;color:#6c757d;">Nenhum veículo encontrado para "${term}".</p>`;
+      listSection.style.display = 'block';
+      return;
+    }
+
+    const linhas = data
+      .map(({ v, idx }) => {
+        const sv = getStatusView(v.status);
+        return `
       <tr>
         <td>${v.placaVinculada || '-'}</td>
         <td>${v.marcaModelo} (${v.anoFabricacao})</td>
         <td>${v.condutorAtual || '-'}</td>
         <td><span class="${sv.cls}">${sv.label}</span></td>
         <td class="user-actions">
-          <button type="button" class="edit" data-index="${i}">Editar</button>
-          <button type="button" class="delete" data-index="${i}">Excluir</button>
+          <button type="button" class="edit" data-index="${idx}">Editar</button>
+          <button type="button" class="delete" data-index="${idx}">Excluir</button>
         </td>
       </tr>
-    `}).join('');
+    `;
+      })
+      .join('');
 
     listContainer.innerHTML = `
       <table class="user-table">
