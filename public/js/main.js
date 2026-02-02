@@ -1576,3 +1576,268 @@ if (userForm) {
     });
   }
 }
+
+// ===== Lançar KM =====
+(() => {
+  const form = document.getElementById('km-form');
+  if (!form) return; // só na página lancar-km
+
+  const inputRef = document.getElementById('km-ref');
+  const inputKm = document.getElementById('km-valor');
+  const msgEl = document.getElementById('km-form-message');
+  const matchInfo = document.getElementById('km-match-info');
+  const suggBox = document.getElementById('km-suggestions');
+  const historySection = document.getElementById('km-history-section');
+  const historyBox = document.getElementById('km-history');
+
+  let veiculos = [];
+
+  const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const toDigits = (v = '') => String(v).replace(/\D/g, '');
+
+  const carregarVeiculos = async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      veiculos = await res.json();
+    } catch (e) {
+      console.error(e);
+      veiculos = [];
+    }
+  };
+
+  const encontrarVeiculo = (refRaw) => {
+    const n = norm(refRaw);
+    if (!n) return null;
+    return (veiculos || []).find(v =>
+      norm(v.placa) === n ||
+      norm(v.placaVinculada) === n ||
+      norm(v.prefixo) === n
+    ) || null;
+  };
+
+  const renderMatch = (v) => {
+    if (!matchInfo) return;
+    if (!v) {
+      matchInfo.style.display = 'none';
+      matchInfo.innerHTML = '';
+      return;
+    }
+    matchInfo.style.display = 'block';
+    matchInfo.innerHTML = `
+      <div class="form-row">
+        <div class="form-field">
+          <label>Veículo</label>
+          <div>${v.marcaModelo || '-'} (${v.anoFabricacao || '-'})</div>
+        </div>
+        <div class="form-field">
+          <label>Prefixo</label>
+          <div>${v.prefixo || '-'}</div>
+        </div>
+        <div class="form-field">
+          <label>Placa</label>
+          <div>${v.placa || '-'}</div>
+        </div>
+        <div class="form-field">
+          <label>Placa Vinculada</label>
+          <div>${v.placaVinculada || '-'}</div>
+        </div>
+        <div class="form-field">
+          <label>Km atual</label>
+          <div>${v.kmAtual ?? '-'}</div>
+        </div>
+      </div>
+    `;
+  };
+
+  // Pré-carregar lista
+  carregarVeiculos();
+
+  // ===== Autocomplete =====
+  const buildSuggestions = (termRaw) => {
+    if (!suggBox) return;
+    const term = norm(termRaw || '');
+    if (!term) {
+      suggBox.style.display = 'none';
+      suggBox.innerHTML = '';
+      return;
+    }
+    const items = [];
+    for (const v of veiculos || []) {
+      const keys = [v.placa, v.placaVinculada, v.prefixo].filter(Boolean);
+      for (const key of keys) {
+        const k = String(key);
+        if (norm(k).includes(term)) {
+          items.push({ key: k, label: `${k} — ${v.marcaModelo || ''} ${v.prefixo ? '(' + v.prefixo + ')' : ''}`.trim(), v });
+          break;
+        }
+      }
+      if (items.length >= 12) break;
+    }
+    if (!items.length) {
+      suggBox.style.display = 'none';
+      suggBox.innerHTML = '';
+      return;
+    }
+    suggBox.innerHTML = items
+      .map((it, idx) => `
+        <div class="km-sugg-item" data-key="${it.key.replace(/"/g,'&quot;')}
+          " style="padding:8px 10px; cursor:pointer; border-top:1px solid #eee;">
+          ${it.label}
+        </div>
+      `)
+      .join('');
+    suggBox.style.display = 'block';
+
+    suggBox.querySelectorAll('.km-sugg-item').forEach((el) => {
+      el.addEventListener('mousedown', (e) => {
+        // mousedown para não perder o foco antes do click
+        const key = el.getAttribute('data-key');
+        if (inputRef && key) {
+          inputRef.value = key;
+          suggBox.style.display = 'none';
+          const v = encontrarVeiculo(key);
+          renderMatch(v);
+          if (v?.id) renderHistorico(v.id);
+        }
+        e.preventDefault();
+      });
+    });
+  };
+
+  if (inputRef) {
+    inputRef.addEventListener('input', () => buildSuggestions(inputRef.value));
+    inputRef.addEventListener('focus', () => buildSuggestions(inputRef.value));
+    inputRef.addEventListener('blur', () => {
+      // pequeno atraso para permitir clique no item
+      setTimeout(() => {
+        if (suggBox) { suggBox.style.display = 'none'; }
+      }, 120);
+    });
+  }
+
+  // ===== Histórico (últimos 10) =====
+  const formatDateTimeBR = (iso) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '-';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${yy} ${hh}:${mi}`;
+  };
+
+  const renderHistorico = async (veiculoId) => {
+    if (!historyBox || !historySection) return;
+    try {
+      const res = await fetch(`/api/v1/veiculos/${veiculoId}/kms`);
+      if (!res.ok) throw new Error('Falha ao carregar histórico');
+      const rows = await res.json();
+      // Ordena desc por data/id e pega 10 últimos
+      const ordenado = [...rows].sort((a,b) => {
+        const da = new Date(a.dataLeitura).getTime();
+        const db = new Date(b.dataLeitura).getTime();
+        if (db !== da) return db - da;
+        return (b.id||0) - (a.id||0);
+      }).slice(0, 10);
+
+      if (!ordenado.length) {
+        historyBox.innerHTML = '<p style="font-size:14px;color:#6c757d;">Sem registros.</p>';
+        historySection.style.display = 'block';
+        return;
+      }
+
+      const linhas = ordenado.map(r => `
+        <tr>
+          <td>${formatDateTimeBR(r.dataLeitura)}</td>
+          <td>${r.km}</td>
+          <td>${(r.origem || '').toString().toUpperCase()}</td>
+        </tr>
+      `).join('');
+
+      historyBox.innerHTML = `
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>KM</th>
+              <th>Origem</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      `;
+      historySection.style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      historyBox.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Erro ao carregar histórico.</p>';
+      historySection.style.display = 'block';
+    }
+  };
+
+  // Ao sair do campo de referência, tenta mostrar o veículo
+  if (inputRef) {
+    inputRef.addEventListener('blur', () => {
+      const v = encontrarVeiculo(inputRef.value);
+      renderMatch(v);
+      if (v?.id) renderHistorico(v.id);
+      if (!v && msgEl) {
+        msgEl.textContent = 'Veículo não encontrado.';
+        msgEl.style.color = '#e74c3c';
+      } else if (msgEl) {
+        msgEl.textContent = '';
+      }
+    });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msgEl) { msgEl.textContent = ''; msgEl.style.color = '#495057'; }
+
+    const ref = (inputRef?.value || '').trim();
+    const km = Number(toDigits(inputKm?.value || ''));
+
+    const erros = [];
+    if (!ref) erros.push('Informe a referência do veículo.');
+    if (!(km >= 0)) erros.push('Informe um KM válido (somente números).');
+    if (erros.length) {
+      if (msgEl) { msgEl.textContent = erros[0]; msgEl.style.color = '#e74c3c'; }
+      return;
+    }
+
+    try {
+      if (!veiculos.length) await carregarVeiculos();
+      const v = encontrarVeiculo(ref);
+      renderMatch(v);
+      if (!v?.id) {
+        if (msgEl) { msgEl.textContent = 'Veículo não encontrado.'; msgEl.style.color = '#e74c3c'; }
+        return;
+      }
+
+      const res = await fetch(`/api/v1/veiculos/${v.id}/kms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ km }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (msgEl) { msgEl.textContent = data?.message || 'Erro ao registrar KM.'; msgEl.style.color = '#e74c3c'; }
+        return;
+      }
+
+      if (typeof showToast === 'function') showToast('KM registrado com sucesso');
+      if (inputKm) inputKm.value = '';
+      if (msgEl) { msgEl.textContent = 'KM registrado com sucesso.'; msgEl.style.color = '#2ecc71'; }
+
+      await carregarVeiculos();
+      const v2 = encontrarVeiculo(ref);
+      renderMatch(v2);
+      if (v2?.id) renderHistorico(v2.id);
+    } catch (err) {
+      console.error(err);
+      if (msgEl) { msgEl.textContent = 'Falha ao comunicar com o servidor.'; msgEl.style.color = '#e74c3c'; }
+    }
+  });
+})();
