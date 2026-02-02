@@ -411,6 +411,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
     });
   }
 
+  // Removido alerta em alterações de campo: exibir apenas no Salvar alterações
+
   const toDigits = (v = '') => v.replace(/\D/g, '');
   const validarPlacaBR = (placa) => {
     const p = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -854,8 +856,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
         return;
       }
 
-      // Popup conforme ação solicitada (apenas no cadastro)
-      if (!isEdit && typeof showToast === 'function') {
+      // Feedback: alerta somente ao salvar alterações; toast no cadastro
+      if (isEdit) {
+        window.alert('Alterações Realizadas com sucesso!');
+      } else if (typeof showToast === 'function') {
         showToast('Veículo cadastrado com sucesso');
       }
 
