@@ -609,3 +609,14 @@ body.dashboard-body {
   background: #f8d7da;
   color: #721c24;
 }
+
+/* Ícone de alerta (Home: Km Revisão) */
+.warn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  color: #f1c40f; /* amarelo alerta */
+  font-size: 14px;
+  vertical-align: middle;
+}

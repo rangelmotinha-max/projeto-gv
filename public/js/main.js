@@ -1042,6 +1042,12 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
                 status === 'BAIXADA' ? 'Baixada' : status === 'OFICINA' ? 'Oficina' : status === 'ATIVA' ? 'Ativa' : 'Base';
               const statusCls =
                 status === 'BAIXADA' ? 'status-baixada' : status === 'OFICINA' ? 'status-oficina' : status === 'ATIVA' ? 'status-ativa' : 'status-base';
+              const kmAtualNum = Number.isFinite(Number(v.kmAtual)) ? Number(v.kmAtual) : null;
+              const kmRevNum = Number.isFinite(Number(v.proximaRevisaoKm)) ? Number(v.proximaRevisaoKm) : null;
+              const showWarn = kmAtualNum !== null && kmRevNum !== null && (kmRevNum - kmAtualNum) <= 1000;
+              const warnHtml = showWarn
+                ? ' <span class="warn-icon" title="baixar vtr" aria-label="baixar vtr"><i class="fa-solid fa-triangle-exclamation"></i></span>'
+                : '';
               return `
                 <tr>
                   <td>${v.marcaModelo || '-'}</td>
@@ -1051,7 +1057,7 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
                   <td>${v.condutorAtual || '-'}</td>
                   <td><span class="${statusCls}">${statusLabel}</span></td>
                   <td>${(v.kmAtual ?? '-') }</td>
-                  <td>${(v.proximaRevisaoKm ?? '-') }</td>
+                  <td>${(v.proximaRevisaoKm ?? '-') }${warnHtml}</td>
                 </tr>
               `;
             })
