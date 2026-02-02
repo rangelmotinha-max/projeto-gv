@@ -92,6 +92,209 @@ if (forgotPasswordLink && forgotPasswordModal) {
   });
 }
 
+// ===== Relatório de Veículos =====
+(() => {
+  const filtersForm = document.getElementById('report-filters-form');
+  const runBtn = document.getElementById('report-run');
+  const pdfBtn = document.getElementById('report-pdf');
+  const tableContainer = document.getElementById('report-table-container');
+  const msgEl = document.getElementById('report-message');
+
+  const elTotal = document.getElementById('report-total');
+  const elBase = document.getElementById('report-base');
+  const elAtiva = document.getElementById('report-ativa');
+  const elOficina = document.getElementById('report-oficina');
+  const elBaixada = document.getElementById('report-baixada');
+
+  // Só roda na página de relatório
+  if (!tableContainer && !filtersForm && !runBtn) return;
+
+  let lista = [];
+  let ultimoResultado = [];
+
+  const norm = (s) =>
+    String(s ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+  const carregar = async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      lista = await res.json();
+    } catch (e) {
+      console.error(e);
+      lista = [];
+      if (msgEl) { msgEl.textContent = 'Erro ao carregar dados.'; msgEl.style.color = '#e74c3c'; }
+    }
+  };
+
+  const getFilters = () => {
+    const status = document.getElementById('filter-status')?.value || '';
+    const condutor = document.getElementById('filter-condutor')?.value || '';
+    const placa = document.getElementById('filter-placa')?.value || '';
+    const placaVinculada = document.getElementById('filter-placa-vinculada')?.value || '';
+    const prefixo = document.getElementById('filter-prefixo')?.value || '';
+    return { status, condutor, placa, placaVinculada, prefixo };
+  };
+
+  const aplica = (v, f) => {
+    if (f.status && String(v.status).toUpperCase() !== String(f.status).toUpperCase()) return false;
+    if (f.condutor && !norm(v.condutorAtual).includes(norm(f.condutor))) return false;
+    if (f.placa && !norm(v.placa).includes(norm(f.placa))) return false;
+    if (f.placaVinculada && !norm(v.placaVinculada).includes(norm(f.placaVinculada))) return false;
+    if (f.prefixo && !norm(v.prefixo).includes(norm(f.prefixo))) return false;
+    return true;
+  };
+
+  const atualizarResumo = (data) => {
+    const total = data.length;
+    const base = data.filter(v => String(v.status).toUpperCase() === 'BASE').length;
+    const ativa = data.filter(v => String(v.status).toUpperCase() === 'ATIVA').length;
+    const oficina = data.filter(v => String(v.status).toUpperCase() === 'OFICINA').length;
+    const baixada = data.filter(v => String(v.status).toUpperCase() === 'BAIXADA').length;
+    if (elTotal) elTotal.textContent = total;
+    if (elBase) elBase.textContent = base;
+    if (elAtiva) elAtiva.textContent = ativa;
+    if (elOficina) elOficina.textContent = oficina;
+    if (elBaixada) elBaixada.textContent = baixada;
+  };
+
+  const renderTabela = (data) => {
+    if (!tableContainer) return;
+    if (!data.length) {
+      tableContainer.innerHTML = '<p style="font-size:14px;color:#6c757d;">Nenhum veículo encontrado com os filtros selecionados.</p>';
+      return;
+    }
+    const linhas = data.map(v => `
+        <tr>
+          <td>${v.prefixo || '-'}</td>
+          <td>${v.placa || '-'}</td>
+          <td>${v.placaVinculada || '-'}</td>
+          <td>${v.marcaModelo || '-'}</td>
+          <td>${v.anoFabricacao || '-'}</td>
+          <td>${v.unidade || '-'}</td>
+          <td>${v.condutorAtual || '-'}</td>
+          <td>${String(v.status || '').toUpperCase()}</td>
+          <td>${v.osCman || '-'}</td>
+          <td>${v.osPrime || '-'}</td>
+          <td>${v.kmAtual ?? '-'}</td>
+          <td>${v.proximaRevisaoKm ?? '-'}</td>
+          <td>${v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '-'}</td>
+        </tr>
+      `).join('');
+
+    tableContainer.innerHTML = `
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>Prefixo</th>
+              <th>Placa</th>
+              <th>Placa Vinculada</th>
+              <th>Marca/Modelo</th>
+              <th>Ano</th>
+              <th>Unidade</th>
+              <th>Condutor</th>
+              <th>Status</th>
+              <th>OS CMAN</th>
+              <th>OS PRIME</th>
+              <th>Km Atual</th>
+              <th>Próx. Revisão Km</th>
+              <th>Data Próx. Revisão</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      `;
+  };
+
+  const gerar = async () => {
+    if (msgEl) { msgEl.textContent = ''; msgEl.style.color = '#495057'; }
+    if (!lista.length) await carregar();
+    const f = getFilters();
+    ultimoResultado = (lista || []).filter(v => aplica(v, f));
+    atualizarResumo(ultimoResultado);
+    renderTabela(ultimoResultado);
+  };
+
+  const gerarPDF = () => {
+    try {
+      const jspdf = window.jspdf;
+      if (!jspdf || !jspdf.jsPDF) {
+        window.alert('Biblioteca PDF não carregada. Verifique sua conexão.');
+        return;
+      }
+      const { jsPDF } = jspdf;
+      const doc = new jsPDF('l', 'pt', 'A4'); // paisagem, pontos, A4
+
+      // Cabeçalho
+      doc.setFontSize(14);
+      doc.text('Relatório de Veículos', 40, 40);
+      const hoje = new Date();
+      const dataStr = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+      doc.setFontSize(10);
+      doc.text(`Gerado em: ${dataStr}`, 40, 58);
+
+      // Resumo
+      const total = ultimoResultado.length;
+      const base = ultimoResultado.filter(v => String(v.status).toUpperCase() === 'BASE').length;
+      const ativa = ultimoResultado.filter(v => String(v.status).toUpperCase() === 'ATIVA').length;
+      const oficina = ultimoResultado.filter(v => String(v.status).toUpperCase() === 'OFICINA').length;
+      const baixada = ultimoResultado.filter(v => String(v.status).toUpperCase() === 'BAIXADA').length;
+      doc.text(`Total: ${total} | Base: ${base} | Ativa: ${ativa} | Oficina: ${oficina} | Baixada: ${baixada}`, 40, 74);
+
+      // Tabela
+      const head = [[
+        'Prefixo','Placa','Placa Vinculada','Marca/Modelo','Ano','Unidade','Condutor',
+        'Status','OS CMAN','OS PRIME','Km Atual','Próx. Revisão Km','Data Próx. Revisão'
+      ]];
+      const body = ultimoResultado.map(v => [
+        v.prefixo || '', v.placa || '', v.placaVinculada || '', v.marcaModelo || '',
+        v.anoFabricacao || '', v.unidade || '', v.condutorAtual || '',
+        String(v.status || '').toUpperCase(), v.osCman || '', v.osPrime || '',
+        v.kmAtual ?? '', v.proximaRevisaoKm ?? '', v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : ''
+      ]);
+
+      doc.autoTable({
+        head,
+        body,
+        startY: 88,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [73, 94, 196], textColor: 255 },
+        theme: 'striped',
+      });
+
+      doc.save(`relatorio_veiculos_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (e) {
+      console.error(e);
+      window.alert('Falha ao gerar PDF.');
+    }
+  };
+
+  if (filtersForm) {
+    filtersForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      gerar();
+    });
+  }
+  if (runBtn) {
+    runBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      gerar();
+    });
+  }
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      gerarPDF();
+    });
+  }
+
+  // Gera relatório inicial sem filtros
+  gerar();
+})();
+
 // ===== Cadastro de Veículo: salvar, listar, editar e excluir =====
 (() => {
   const form = document.getElementById('vehicle-form');
