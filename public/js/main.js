@@ -107,6 +107,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
   if (tableContainer) {
     tableContainer.style.display = 'none';
   }
+  // Esconde o gráfico até o usuário selecionar o período
+  if (chartCanvas) {
+    chartCanvas.style.display = 'none';
+  }
 
   const elTotal = document.getElementById('report-total');
   const elBase = document.getElementById('report-base');
@@ -258,7 +262,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
     if (!chartCanvas) return;
     const periodKey = periodSelect?.value || 'mensal';
     if (msgEl) { msgEl.textContent = 'Calculando gráfico...'; msgEl.style.color = '#495057'; }
-    const dados = await carregarKmPeriodo(ultimoResultado, periodKey);
+    if (!lista.length) await carregar();
+    const dados = await carregarKmPeriodo(lista, periodKey);
     const ordenados = dados.sort((a,b) => b.km - a.km);
     const labels = ordenados.map(d => d.label);
     const values = ordenados.map(d => d.km);
@@ -267,6 +272,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
       if (msgEl) { msgEl.textContent = 'Nenhum veículo para o gráfico no período selecionado.'; msgEl.style.color = '#6c757d'; }
       return;
     }
+    chartCanvas.style.display = 'block';
     chartCanvas.style.height = `${Math.min(ordenados.length * 28, 600)}px`;
     kmChart = new Chart(chartCanvas.getContext('2d'), {
       type: 'bar',
@@ -292,7 +298,6 @@ if (forgotPasswordLink && forgotPasswordModal) {
     ultimoResultado = (lista || []).filter(v => aplica(v, f));
     atualizarResumo(ultimoResultado);
     renderTabela(ultimoResultado);
-    await renderGrafico();
   };
 
   const gerarPDF = () => {
