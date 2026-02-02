@@ -854,16 +854,15 @@ if (forgotPasswordLink && forgotPasswordModal) {
         return;
       }
 
-      // Popup conforme ação solicitada
-      if (typeof showToast === 'function') {
-        if (isEdit) showToast('Alterações realizadas com sucesso!');
-        else showToast('Veículo cadastrado com sucesso');
+      // Popup conforme ação solicitada (apenas no cadastro)
+      if (!isEdit && typeof showToast === 'function') {
+        showToast('Veículo cadastrado com sucesso');
       }
 
       // Refletir mensagem abaixo do formulário
       if (msgEl) {
-        msgEl.textContent = isEdit ? 'Alterações realizadas com sucesso!' : 'Veículo cadastrado com sucesso';
-        msgEl.style.color = '#2ecc71';
+        msgEl.textContent = isEdit ? '' : 'Veículo cadastrado com sucesso';
+        msgEl.style.color = isEdit ? '#495057' : '#2ecc71';
       }
       form.reset();
       if (fotosHandler) fotosHandler.limpar();
