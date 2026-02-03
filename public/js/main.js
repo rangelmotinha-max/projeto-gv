@@ -906,6 +906,214 @@ if (forgotPasswordLink && forgotPasswordModal) {
     await carregar();
     render();
   });
+
+  // Se vier com parâmetro ?editId= na URL, carrega e prepara edição
+  (async () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const pid = params.get('editId');
+      if (!pid) return;
+      // Carrega lista e busca o veículo
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      const lista = await res.json();
+      const v = (lista || []).find((it) => String(it.id) === String(pid));
+      if (!v) return;
+      // Popular campos como no clique de Editar
+      document.getElementById('veic-marca-modelo').value = v.marcaModelo || '';
+      document.getElementById('veic-ano').value = v.anoFabricacao || '';
+      document.getElementById('veic-prefixo').value = v.prefixo || '';
+      document.getElementById('veic-placa').value = v.placa || '';
+      document.getElementById('veic-placa-vinculada').value = v.placaVinculada || '';
+      document.getElementById('veic-unidade').value = v.unidade || '';
+      const corEl = document.getElementById('veic-cor');
+      if (corEl) corEl.value = v.cor || '';
+      document.getElementById('veic-km-atual').value = v.kmAtual ?? '';
+      document.getElementById('veic-prox-rev-km').value = v.proximaRevisaoKm ?? '';
+      document.getElementById('veic-data-prox-rev').value = v.dataProximaRevisao ? String(v.dataProximaRevisao).slice(0,10) : '';
+      document.getElementById('veic-condutor').value = v.condutorAtual || '';
+      const obsEl = document.getElementById('veic-observacoes');
+      if (obsEl) obsEl.value = v.observacoes || '';
+      const cartaoInput = document.getElementById('veic-cartao');
+      if (cartaoInput) {
+        if (v.cartao && typeof v.cartao === 'string') {
+          const digits = v.cartao.replace(/\D/g, '').slice(0, 16);
+          cartaoInput.value = (digits.match(/.{1,4}/g) || []).join('.').slice(0, 19);
+        } else {
+          cartaoInput.value = '';
+        }
+        if (typeof cartaoInput._updateCardOverlay === 'function') {
+          cartaoInput._updateCardOverlay();
+        }
+      }
+      document.getElementById('veic-os-cman').value = v.osCman || '';
+      document.getElementById('veic-os-prime').value = v.osPrime || '';
+      document.getElementById('veic-status').value = v.status || '';
+      editId = v.id;
+      if (fotosHandler) {
+        fotosHandler.setExistingFotos(v.fotos || [], editId);
+      }
+      form.setAttribute('data-edit-id', String(editId));
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+      if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+    } catch (e) {
+      console.error(e);
+    }
+  })();
+})();
+
+// ===== Consulta de Veículos: pesquisar, listar e ações =====
+(() => {
+  const form = document.getElementById('vehicle-form');
+  const listSection = document.getElementById('vehicle-list-section');
+  const listContainer = document.getElementById('vehicle-list-container');
+  const searchInput = document.getElementById('veh-search');
+
+  // Executa apenas em páginas sem o formulário de cadastro, mas com a seção de lista
+  if (form || !listSection || !listContainer) return;
+
+  let veiculos = [];
+  let termoBusca = '';
+
+  const norm = (s) =>
+    String(s ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+  const getStatusView = (code) => {
+    const c = String(code || '').toUpperCase();
+    if (c === 'BAIXADA') return { label: 'Baixada', cls: 'status-baixada' };
+    if (c === 'OFICINA') return { label: 'Oficina', cls: 'status-oficina' };
+    if (c === 'ATIVA') return { label: 'Ativa', cls: 'status-ativa' };
+    return { label: 'Base', cls: 'status-base' };
+  };
+
+  const carregar = async () => {
+    try {
+      const res = await fetch('/api/v1/veiculos');
+      if (!res.ok) throw new Error('Falha ao carregar veículos');
+      veiculos = await res.json();
+    } catch (e) {
+      console.error(e);
+      veiculos = [];
+    }
+  };
+
+  const render = () => {
+    if (!listContainer || !listSection) return;
+    const term = (termoBusca || '').trim();
+    const t = norm(term);
+
+    // Na Consulta, não exibir nada até o usuário digitar algum termo
+    if (!term) {
+      listContainer.innerHTML = '';
+      return;
+    }
+
+    const base = veiculos.map((v) => ({ v }));
+    const data = t
+      ? base.filter(({ v }) => {
+          const combined = [
+            v.placa,
+            v.placaVinculada,
+            v.marcaModelo,
+            v.anoFabricacao,
+            v.unidade,
+            v.condutorAtual,
+            v.prefixo,
+            v.status,
+            v.osCman,
+            v.osPrime,
+            v.cartao,
+          ]
+            .map(norm)
+            .join(' ');
+          return combined.includes(t);
+        })
+      : base;
+
+    if (!data.length) {
+      const msg = `Nenhum veículo encontrado para "${term}".`;
+      listContainer.innerHTML = `<p style="font-size:14px;color:#6c757d;">${msg}</p>`;
+      return;
+    }
+
+    const linhas = data
+      .map(({ v }) => {
+        const sv = getStatusView(v.status);
+        return `
+      <tr>
+        <td>${v.placaVinculada || '-'}</td>
+        <td>${v.marcaModelo} (${v.anoFabricacao})</td>
+        <td>${v.cor || '-'}</td>
+        <td>${v.condutorAtual || '-'}</td>
+        <td><span class="${sv.cls}">${sv.label}</span></td>
+        <td class="user-actions">
+          <button type="button" class="edit" data-id="${v.id}">Editar</button>
+          <button type="button" class="delete" data-id="${v.id}">Excluir</button>
+        </td>
+      </tr>
+    `;
+      })
+      .join('');
+
+    listContainer.innerHTML = `
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>Placa Vinculada</th>
+            <th>Veículo</th>
+            <th>Cor</th>
+            <th>Condutor</th>
+            <th>Status</th>
+            <th style="width:120px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    `;
+
+    // Handlers de ações
+    listContainer.querySelectorAll('button.delete').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+        if (!window.confirm('Deseja realmente excluir este veículo?')) return;
+        try {
+          const res = await fetch(`/api/v1/veiculos/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Erro ao excluir');
+          await carregar();
+          render();
+        } catch (e) {
+          console.error(e);
+          window.alert('Erro ao excluir veículo');
+        }
+      });
+    });
+
+    listContainer.querySelectorAll('button.edit').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+        // Redireciona para cadastro com o veículo para edição
+        window.location.href = `/cadastro.html?editId=${encodeURIComponent(id)}`;
+      });
+    });
+  };
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      termoBusca = searchInput.value || '';
+      render();
+    });
+  }
+
+  (async () => {
+    await carregar();
+    render();
+  })();
 })();
 
 

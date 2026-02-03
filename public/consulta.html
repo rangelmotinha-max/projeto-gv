@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consulta | Sistema de Gestão de Viaturas</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body class="dashboard-body">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <i class="fa-solid fa-gears"></i>
+          </div>
+          <div class="sidebar-title">
+            <span class="system-name">SGV</span>
+            <small>Sistema de Gestão de Viaturas</small>
+          </div>
+        </div>
+        <nav class="sidebar-menu">
+          <a href="/home.html" class="menu-item">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+          </a>
+          <a href="/usuarios.html" class="menu-item">
+            <i class="fa-solid fa-users"></i>
+            <span>Usuários</span>
+          </a>
+          <a href="/cadastro.html" class="menu-item">
+            <i class="fa-solid fa-id-card"></i>
+            <span>Cadastro</span>
+          </a>
+          <a href="/consulta.html" class="menu-item active">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Consulta</span>
+          </a>
+          <a href="/relatorio.html" class="menu-item">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Relatório</span>
+          </a>
+          <a href="/lancar-km.html" class="menu-item">
+            <i class="fa-solid fa-road"></i>
+            <span>Lançar KM</span>
+          </a>
+          <a href="/lancar-saldo.html" class="menu-item">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Lançar Saldo</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <h1 class="topbar-title">Consulta</h1>
+          <div class="topbar-right">
+            <span class="user-name" id="topbar-user-name">Administrador</span>
+          </div>
+        </header>
+
+        <section class="section-block" id="vehicle-list-section" style="margin-top: 16px;">
+          <div class="form-row" style="margin-bottom: 8px;">
+            <div class="form-field full-width">
+              <label for="veh-search">Pesquisar</label>
+              <input type="text" id="veh-search" placeholder="Digite para filtrar..." />
+            </div>
+          </div>
+          <h2 class="section-title">Resultados</h2>
+          <div id="vehicle-list-container"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/js/main.js"></script>
+  </body>
+</html>

@@ -27,6 +27,7 @@ app.get('/cadastro.html', requireRoles(['ADMIN', 'LEITOR']), servePublic('cadast
 app.get('/relatorio.html', requireRoles(['ADMIN', 'LEITOR']), servePublic('relatorio.html'));
 app.get('/lancar-km.html', requireRoles(['ADMIN', 'LEITOR', 'EDITOR']), servePublic('lancar-km.html'));
 app.get('/lancar-saldo.html', requireRoles(['ADMIN', 'LEITOR', 'EDITOR']), servePublic('lancar-saldo.html'));
+app.get('/consulta.html', requireRoles(['ADMIN']), servePublic('consulta.html'));
 
 // Arquivos estáticos do frontend (demais assets e páginas públicas)
 app.use(express.static(path.join(__dirname, '..', 'public')));
