@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "db:sqlite:init": "node scripts/init-sqlite.js"
+    "db:sqlite:init": "node scripts/init-sqlite.js",
+    "db:saldo:reset": "node scripts/reset-saldos.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

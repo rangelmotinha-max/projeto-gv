@@ -1261,7 +1261,9 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
               const warnHtml = showWarn
                 ? ' <span class="warn-icon" title="baixar vtr" aria-label="baixar vtr"><i class="fa-solid fa-triangle-exclamation"></i></span>'
                 : '';
-              const saldoHtml = (v.saldoAtual !== undefined && v.saldoAtual !== null) ? formatCurrencyBR(v.saldoAtual) : '-';
+              const saldoHtml = (v.saldoAtual !== undefined && v.saldoAtual !== null && Number(v.saldoAtual) !== 0)
+                ? formatCurrencyBR(v.saldoAtual)
+                : '-';
               return `
                 <tr>
                   <td>${v.marcaModelo || '-'}</td>
