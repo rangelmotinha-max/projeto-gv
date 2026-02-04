@@ -179,7 +179,28 @@ async function alterarSenha(req, res, next) {
         .json({ message: 'Nova senha deve conter exatamente 4 números.' });
     }
 
-    await usuarioService.alterarSenha(id, senhaAtual, novaSenha);
+    const sess = getSession(req);
+    if (!sess) {
+      return res.status(401).json({ message: 'Não autenticado.' });
+    }
+
+    const isSelf = String(sess.id) === String(id);
+    const isAdmin = sess.perfil === 'ADMIN';
+
+    // Regra: cada usuário pode alterar apenas a própria senha.
+    // Administradores podem alterar a senha de qualquer usuário.
+    if (!isSelf && !isAdmin) {
+      return res
+        .status(403)
+        .json({ message: 'Você só pode alterar a sua própria senha.' });
+    }
+
+    if (isSelf) {
+      await usuarioService.alterarSenha(id, senhaAtual, novaSenha);
+    } else if (isAdmin) {
+      // Admin alterando senha de outro usuário: ignora validação da senha atual
+      await usuarioService.alterarSenha(id, '', novaSenha, true);
+    }
 
     res.json({ message: 'Senha alterada com sucesso.' });
   } catch (error) {

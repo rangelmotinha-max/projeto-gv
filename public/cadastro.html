@@ -199,6 +199,54 @@
       </main>
     </div>
 
+    <!-- Modal de perfil/conta do usuário -->
+    <div class="modal-backdrop" id="user-modal" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>Dados do usuário</h2>
+          <button type="button" class="modal-close" id="user-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Nome:</strong> <span id="modal-user-nome">-</span></p>
+          <p><strong>Matrícula:</strong> <span id="modal-user-matricula">-</span></p>
+          <p><strong>Posto/Graduação:</strong> <span id="modal-user-posto">-</span></p>
+          <p><strong>Tipo de Perfil:</strong> <span id="modal-user-perfil">-</span></p>
+          <p>
+            <a href="#" id="link-alterar-senha">Alterar senha</a>
+          </p>
+          <p>
+            <button type="button" id="btn-logout" class="btn-secondary">Sair</button>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de alteração de senha -->
+    <div class="modal-backdrop" id="password-modal" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>Alterar senha</h2>
+          <button type="button" class="modal-close" id="password-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="change-password-form">
+            <div class="form-field">
+              <label for="current-password">Senha atual:</label>
+              <input type="password" id="current-password" required />
+            </div>
+            <div class="form-field">
+              <label for="new-password">Nova senha:</label>
+              <input type="password" id="new-password" required />
+            </div>
+            <div id="change-password-message" class="form-message"></div>
+            <div class="form-actions" style="justify-content: flex-end; margin-top: 12px;">
+              <button type="submit" class="btn-primary">Salvar nova senha</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <script src="/js/main.js"></script>
