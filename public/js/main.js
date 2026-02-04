@@ -430,7 +430,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     return { label: 'Base', cls: 'status-base' };
   };
 
-  const initFotosCadastro = ({ inputEl, previewEl, msgEl, maxCount = 12, maxSizeMb = 5 }) => {
+  const initFotosCadastro = ({ inputEl, previewEl, msgEl, maxCount = 12, maxSizeMb = 10 }) => {
     if (!inputEl || !previewEl) return null;
 
     const maxSizeBytes = maxSizeMb * 1024 * 1024;
@@ -624,7 +624,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     previewEl: document.getElementById('veic-fotos-preview'),
     msgEl,
     maxCount: 12,
-    maxSizeMb: 5,
+    maxSizeMb: 10,
   });
 
   const carregar = async () => {
