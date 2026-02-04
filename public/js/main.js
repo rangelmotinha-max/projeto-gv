@@ -787,6 +787,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
     e.preventDefault();
     if (msgEl) msgEl.textContent = '';
 
+    const erros = [];
+
     const marcaModelo = document.getElementById('veic-marca-modelo').value.trim();
     const anoFabricacao = Number(toDigits(document.getElementById('veic-ano').value));
     const prefixo = document.getElementById('veic-prefixo').value.trim();
@@ -801,12 +803,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const observacoes = (document.getElementById('veic-observacoes')?.value || '').trim();
     const cartaoInput = document.getElementById('veic-cartao');
     const cartaoDigits = (cartaoInput?.value || '').replace(/\D/g, '');
-    if (cartaoDigits.length !== 16) erros.push('Informe o Cartão com 16 dígitos.');
+    if (cartaoDigits && cartaoDigits.length > 0 && cartaoDigits.length !== 16)
+      erros.push('Informe o Cartão com 16 dígitos.');
     const osCman = document.getElementById('veic-os-cman').value.trim();
     const osPrime = document.getElementById('veic-os-prime').value.trim();
     const status = document.getElementById('veic-status').value;
 
-    const erros = [];
     if (!marcaModelo) erros.push('Informe Marca/Modelo.');
     const currentYear = new Date().getFullYear();
     if (!(anoFabricacao >= 1970 && anoFabricacao <= currentYear + 1)) erros.push('Informe um ano de fabricação válido.');
