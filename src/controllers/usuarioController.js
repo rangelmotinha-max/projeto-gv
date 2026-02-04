@@ -20,6 +20,7 @@ async function recuperarSenha(req, res, next) {
   }
 }
 const usuarioService = require('../services/usuarioService');
+const { getSession } = require('../middlewares/auth');
 
 const apenasDigitos = (valor = '') => valor.replace(/\D/g, '');
 
@@ -189,6 +190,32 @@ async function alterarSenha(req, res, next) {
   }
 }
 
+async function zerarSenhaAdmin(req, res, next) {
+  try {
+    const sess = getSession(req);
+    if (!sess || sess.perfil !== 'ADMIN') {
+      return res
+        .status(403)
+        .json({ message: 'Apenas administradores podem zerar senha de usuários.' });
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: 'ID do usuário é obrigatório.' });
+    }
+
+    const novaSenha = '0000';
+    await usuarioService.alterarSenha(id, '', novaSenha, true);
+
+    return res.json({
+      message: 'Senha zerada com sucesso.',
+      novaSenha,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   listar,
   criar,
@@ -196,4 +223,5 @@ module.exports = {
   excluir,
   alterarSenha,
   recuperarSenha,
+   zerarSenhaAdmin,
 };

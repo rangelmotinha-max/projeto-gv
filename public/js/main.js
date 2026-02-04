@@ -1521,6 +1521,7 @@ const userListSection = document.getElementById('user-list-section');
 const userListContainer = document.getElementById('user-list-container');
 const btnLimpar = document.getElementById('btn-limpar');
 const btnListar = document.getElementById('btn-listar');
+const btnZerarSenha = document.getElementById('btn-zerar-senha');
 
 const validarCPF = (cpf) => {
   cpf = apenasDigitos(cpf);
@@ -1553,6 +1554,14 @@ if (userForm) {
   const btnIncluir = userForm.querySelector('button[type="submit"]');
 
   const apiBase = '/api/v1/usuarios';
+
+  if (btnZerarSenha) {
+    if (perfilLogado !== 'ADMIN') {
+      btnZerarSenha.style.display = 'none';
+    } else {
+      btnZerarSenha.disabled = true;
+    }
+  }
 
   const carregarUsuariosApi = async () => {
     try {
@@ -1669,6 +1678,9 @@ if (userForm) {
 
         indiceEdicao = idx;
         if (btnIncluir) btnIncluir.textContent = 'Salvar alterações';
+        if (btnZerarSenha && perfilLogado === 'ADMIN') {
+          btnZerarSenha.disabled = false;
+        }
         msgEl.textContent = 'Editando usuário selecionado.';
         msgEl.style.color = '#495057';
       });
@@ -1761,6 +1773,7 @@ if (userForm) {
           userForm.reset();
           indiceEdicao = null;
           if (btnIncluir) btnIncluir.textContent = 'Incluir';
+          if (btnZerarSenha) btnZerarSenha.disabled = true;
           renderizarTabelaUsuarios();
         })
         .catch((error) => {
@@ -1789,6 +1802,7 @@ if (userForm) {
           userForm.reset();
           indiceEdicao = null;
           if (btnIncluir) btnIncluir.textContent = 'Incluir';
+           if (btnZerarSenha) btnZerarSenha.disabled = true;
           renderizarTabelaUsuarios();
         })
         .catch((error) => {
@@ -1805,6 +1819,7 @@ if (userForm) {
       if (msgEl) msgEl.textContent = '';
       indiceEdicao = null;
       if (btnIncluir) btnIncluir.textContent = 'Incluir';
+      if (btnZerarSenha) btnZerarSenha.disabled = true;
     });
   }
 
@@ -1812,6 +1827,55 @@ if (userForm) {
     btnListar.addEventListener('click', async () => {
       await carregarUsuariosApi();
       renderizarTabelaUsuarios();
+    });
+  }
+
+  if (btnZerarSenha) {
+    btnZerarSenha.addEventListener('click', async () => {
+      if (perfilLogado !== 'ADMIN') {
+        window.alert('Acesso negado. Procure o administrador do sistema!');
+        return;
+      }
+
+      if (indiceEdicao === null || !usuarios[indiceEdicao]) {
+        window.alert('Selecione um usuário para edição antes de zerar a senha.');
+        return;
+      }
+
+      const usuario = usuarios[indiceEdicao];
+
+      const confirmou = window.confirm(
+        `Deseja realmente zerar a senha do usuário:\n\n` +
+        `${usuario.nome} (Matrícula: ${usuario.matricula})?\n\n` +
+        `A nova senha será: 0000`
+      );
+      if (!confirmou) return;
+
+      try {
+        const res = await fetch(`${apiBase}/${usuario.id}/zerar-senha`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          window.alert(data?.message || 'Erro ao zerar senha do usuário.');
+          return;
+        }
+
+        const inputSenha = document.getElementById('user-senha');
+        if (inputSenha) inputSenha.value = '0000';
+
+        window.alert(
+          `Qual usuário teve a senha zerada?\n` +
+          `Usuário: ${usuario.nome} (Matrícula: ${usuario.matricula})\n\n` +
+          `Qual a nova senha?\n` +
+          `Nova senha: 0000`
+        );
+      } catch (err) {
+        console.error(err);
+        window.alert('Erro ao comunicar com o servidor ao zerar a senha.');
+      }
     });
   }
 }

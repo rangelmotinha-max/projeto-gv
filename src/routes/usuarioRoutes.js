@@ -13,6 +13,9 @@ router.delete('/usuarios/:id', usuarioController.excluir);
 // alteração de senha do usuário logado
 router.put('/usuarios/:id/senha', usuarioController.alterarSenha);
 
+// reset de senha por administrador (zera para 0000)
+router.put('/usuarios/:id/zerar-senha', usuarioController.zerarSenhaAdmin);
+
 // recuperação de senha por nome, matrícula e CPF
 router.put('/usuarios/recuperar-senha', usuarioController.recuperarSenha);
 
