@@ -2246,6 +2246,9 @@ if (userForm) {
 
   let veiculos = [];
 
+  const usuarioLogado = typeof getUsuarioLogado === 'function' ? getUsuarioLogado() : null;
+  const isAdmin = usuarioLogado?.perfil === 'ADMIN';
+
   const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
   const carregarVeiculos = async () => {
@@ -2412,13 +2415,35 @@ if (userForm) {
         if (elSaldo) elSaldo.textContent = '-';
         return;
       }
-      const linhas = ordenado.map(r => `
-        <tr>
-          <td>${formatDateTimeBR(r.dataLeitura)}</td>
-          <td>${formatCurrencyBR(r.valor)}</td>
-          <td>${(r.origem || '').toString().toUpperCase()}</td>
-        </tr>
-      `).join('');
+
+      let linhas = '';
+      if (!isAdmin) {
+        linhas = ordenado.map(r => `
+          <tr>
+            <td>${formatDateTimeBR(r.dataLeitura)}</td>
+            <td>${formatCurrencyBR(r.valor)}</td>
+            <td>${(r.origem || '').toString().toUpperCase()}</td>
+          </tr>
+        `).join('');
+      } else {
+        linhas = ordenado.map((r, idx) => {
+          const editavel = idx <= 2; // apenas os 3 últimos registros
+          return `
+            <tr data-saldo-id="${r.id}">
+              <td>${formatDateTimeBR(r.dataLeitura)}</td>
+              <td>
+                ${editavel
+                  ? `<input type="text" class="saldo-edit-input" value="${formatCurrencyBR(r.valor)}" style="width:120px;" />`
+                  : `${formatCurrencyBR(r.valor)}`}
+              </td>
+              <td>${(r.origem || '').toString().toUpperCase()}</td>
+              <td class="user-actions">
+                ${editavel ? '<button type="button" class="saldo-save">Salvar</button>' : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
       historyBox.innerHTML = `
         <table class="user-table">
           <thead>
@@ -2426,6 +2451,7 @@ if (userForm) {
               <th>Data/Hora</th>
               <th>Saldo</th>
               <th>Origem</th>
+              ${isAdmin ? '<th style="width:90px;">Ações</th>' : ''}
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
@@ -2435,6 +2461,61 @@ if (userForm) {
       const elSaldo = document.getElementById('saldo-atual');
       const saldoAtual = ordenado[0]?.valor;
       if (elSaldo) elSaldo.textContent = saldoAtual !== undefined ? formatCurrencyBR(saldoAtual) : '-';
+
+      if (isAdmin) {
+        historyBox.querySelectorAll('.saldo-save').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const tr = btn.closest('tr');
+            const saldoId = tr?.getAttribute('data-saldo-id');
+            const input = tr?.querySelector('.saldo-edit-input');
+            const valorNum = parseSaldo(input?.value || '');
+
+            if (!(valorNum >= 0)) {
+              if (msgEl) {
+                msgEl.textContent = 'Informe um saldo válido (ex.: 150,00).';
+                msgEl.style.color = '#e74c3c';
+              }
+              return;
+            }
+
+            try {
+              const resUpdate = await fetch(`/api/v1/veiculos/${veiculoId}/saldos/${saldoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valor: valorNum }),
+              });
+              const dataUpdate = await resUpdate.json().catch(() => null);
+              if (!resUpdate.ok) {
+                if (msgEl) {
+                  msgEl.textContent = dataUpdate?.message || 'Erro ao atualizar saldo.';
+                  msgEl.style.color = '#e74c3c';
+                } else {
+                  window.alert(dataUpdate?.message || 'Erro ao atualizar saldo.');
+                }
+                return;
+              }
+
+              if (msgEl) {
+                msgEl.textContent = '';
+                msgEl.style.color = '#495057';
+              }
+
+              window.alert('Saldo alterado com sucesso');
+
+              await carregarVeiculos();
+              await renderHistorico(veiculoId);
+            } catch (e) {
+              console.error(e);
+              if (msgEl) {
+                msgEl.textContent = 'Falha ao comunicar com o servidor.';
+                msgEl.style.color = '#e74c3c';
+              } else {
+                window.alert('Falha ao comunicar com o servidor.');
+              }
+            }
+          });
+        });
+      }
     } catch (e) {
       console.error(e);
       historyBox.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Erro ao carregar histórico.</p>';

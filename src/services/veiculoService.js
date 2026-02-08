@@ -421,6 +421,52 @@ async function registrarLeituraSaldo(veiculoId, valor, dataLeitura = null, orige
   await db.execute(sql, [veiculoId, valor, ts, origem]);
 }
 
+async function atualizarLeituraSaldo(veiculoId, saldoId, novoValor) {
+  const veiculoIdNum = Number(veiculoId);
+  const saldoIdNum = Number(saldoId);
+  if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0 || !Number.isInteger(saldoIdNum) || saldoIdNum <= 0) {
+    const err = new Error('Identificadores inválidos para veículo ou leitura de saldo.');
+    err.status = 400;
+    throw err;
+  }
+
+  const [rowsAtual] = await db.query(
+    'SELECT id, veiculo_id AS veiculoId, valor, data_leitura AS dataLeitura FROM veiculo_saldo_historico WHERE id = ? AND veiculo_id = ?',
+    [saldoIdNum, veiculoIdNum]
+  );
+  if (!rowsAtual.length) {
+    const err = new Error('Leitura de saldo não encontrada para este veículo.');
+    err.status = 404;
+    throw err;
+  }
+
+  const novoValorNum = Number(novoValor);
+  if (!Number.isFinite(novoValorNum) || novoValorNum < 0) {
+    const err = new Error('Informe um saldo válido.');
+    err.status = 400;
+    throw err;
+  }
+
+  // Garante que somente uma das 3 últimas leituras possa ser alterada
+  const [ultimos] = await db.query(
+    'SELECT id FROM veiculo_saldo_historico WHERE veiculo_id = ? ORDER BY data_leitura DESC, id DESC LIMIT 3',
+    [veiculoIdNum]
+  );
+  const permitido = ultimos.some((r) => r.id === saldoIdNum);
+  if (!permitido) {
+    const err = new Error('Só é permitido alterar um dos 3 últimos registros de saldo.');
+    err.status = 400;
+    throw err;
+  }
+
+  await db.execute(
+    'UPDATE veiculo_saldo_historico SET valor = ? WHERE id = ? AND veiculo_id = ?',
+    [novoValorNum, saldoIdNum, veiculoIdNum]
+  );
+
+  return { id: saldoIdNum, veiculoId: veiculoIdNum, valor: novoValorNum };
+}
+
 async function listarLeiturasSaldo(veiculoId, inicio = null, fim = null) {
   const where = ['veiculo_id = ?'];
   const params = [veiculoId];
@@ -449,5 +495,6 @@ module.exports = {
   obterMediasKm,
    atualizarLeituraKm,
   registrarLeituraSaldo,
+  atualizarLeituraSaldo,
   listarLeiturasSaldo,
 };

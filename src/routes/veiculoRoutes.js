@@ -34,5 +34,6 @@ router.put('/veiculos/:id/kms/:kmId', express.json(), veiculoController.atualiza
 // Histórico de Saldo
 router.post('/veiculos/:id/saldos', express.json(), veiculoController.adicionarSaldo);
 router.get('/veiculos/:id/saldos', veiculoController.listarSaldos);
+router.put('/veiculos/:id/saldos/:saldoId', express.json(), veiculoController.atualizarSaldo);
 
 module.exports = router;

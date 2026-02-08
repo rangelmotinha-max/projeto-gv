@@ -316,6 +316,38 @@ async function listarSaldos(req, res, next) {
     next(e);
   }
 }
+// Atualização de leitura de Saldo (apenas ADMIN, e somente um dos 3 últimos registros)
+async function atualizarSaldo(req, res, next) {
+  try {
+    const sess = getSession(req);
+    if (!sess || sess.perfil !== 'ADMIN') {
+      return res.status(403).json({ message: 'Apenas administradores podem alterar o histórico de saldo.' });
+    }
+
+    const { id, saldoId } = req.params;
+    const { valor } = req.body;
+
+    const veiculoIdNum = Number(id);
+    const saldoIdNum = Number(saldoId);
+    const valorNum = Number(valor);
+
+    if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0) {
+      return res.status(400).json({ message: 'Informe um ID de veículo válido.' });
+    }
+    if (!Number.isInteger(saldoIdNum) || saldoIdNum <= 0) {
+      return res.status(400).json({ message: 'Informe um ID de leitura de saldo válido.' });
+    }
+    if (Number.isNaN(valorNum) || valorNum < 0) {
+      return res.status(400).json({ message: 'Informe um saldo válido.' });
+    }
+
+    const atualizado = await veiculoService.atualizarLeituraSaldo(veiculoIdNum, saldoIdNum, valorNum);
+    res.json(atualizado);
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    next(e);
+  }
+}
 // Atualização de leitura de KM (apenas ADMIN, e somente um dos 3 últimos registros)
 async function atualizarKm(req, res, next) {
   try {
@@ -349,4 +381,4 @@ async function atualizarKm(req, res, next) {
   }
 }
 
-module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms, adicionarSaldo, listarSaldos, atualizarKm };
+module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms, adicionarSaldo, listarSaldos, atualizarSaldo, atualizarKm };
