@@ -1917,11 +1917,16 @@ if (userForm) {
   const encontrarVeiculo = (refRaw) => {
     const n = norm(refRaw);
     if (!n) return null;
-    return (veiculos || []).find(v =>
-      norm(v.placa) === n ||
-      norm(v.placaVinculada) === n ||
-      norm(v.prefixo) === n
-    ) || null;
+    return (veiculos || []).find((v) => {
+      const marcaNorm = norm(String(v.marcaModelo || ''));
+      return (
+        norm(v.placa) === n ||
+        norm(v.placaVinculada) === n ||
+        norm(v.prefixo) === n ||
+        marcaNorm === n ||
+        (!!marcaNorm && marcaNorm.includes(n))
+      );
+    }) || null;
   };
 
   const renderMatch = (v) => {
@@ -1972,7 +1977,7 @@ if (userForm) {
     }
     const items = [];
     for (const v of veiculos || []) {
-      const keys = [v.placa, v.placaVinculada, v.prefixo].filter(Boolean);
+      const keys = [v.placa, v.placaVinculada, v.prefixo, v.marcaModelo].filter(Boolean);
       for (const key of keys) {
         const k = String(key);
         if (norm(k).includes(term)) {
