@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Autocompletar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        #suggestions {
+            position: relative;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 200px;
+            overflow: auto;
+            display: none;
+        }
+        .sugg-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .sugg-item:hover {
+            background: #f0f0f0;
+        }
+        .info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+        }
+        button {
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🔍 Diagnóstico de Autocompletar</h1>
+        
+        <div id="status-container"></div>
+        
+        <h3>Teste o autocompletar:</h3>
+        <p>Digite parte do nome de um veículo (ex: "hilux", "cronos", "troller"):</p>
+        <input type="text" id="test-input" placeholder="Digite aqui..." />
+        <div id="suggestions"></div>
+        
+        <div id="result-info" style="margin-top: 20px;"></div>
+        
+        <div style="margin-top: 30px;">
+            <button onclick="location.reload(true)">🔄 Recarregar (forçar cache)</button>
+            <button onclick="runDiagnostic()">🔍 Executar Diagnóstico</button>
+        </div>
+    </div>
+
+    <script>
+        const statusContainer = document.getElementById('status-container');
+        const input = document.getElementById('test-input');
+        const suggestionsBox = document.getElementById('suggestions');
+        const resultInfo = document.getElementById('result-info');
+        
+        let veiculos = [];
+        
+        function showStatus(message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusContainer.appendChild(div);
+        }
+        
+        async function runDiagnostic() {
+            statusContainer.innerHTML = '';
+            resultInfo.innerHTML = '';
+            
+            showStatus('🔍 Iniciando diagnóstico...', 'warning');
+            
+            // Teste 1: Verificar se a API está respondendo
+            try {
+                const response = await fetch('/api/v1/veiculos');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                veiculos = data;
+                showStatus(`✅ API respondendo: ${veiculos.length} veículos encontrados`, 'success');
+                
+                // Mostrar alguns exemplos
+                if (veiculos.length > 0) {
+                    const exemplos = veiculos.slice(0, 3).map(v => 
+                        `${v.marcaModelo} (${v.placa})`
+                    ).join(', ');
+                    showStatus(`📋 Exemplos: ${exemplos}`, 'success');
+                }
+            } catch (error) {
+                showStatus(`❌ Erro ao acessar API: ${error.message}`, 'error');
+                showStatus(`💡 Solução: Verifique se o servidor está rodando com: sudo npm start`, 'warning');
+                return;
+            }
+            
+            // Teste 2: Verificar elementos da página
+            const elements = {
+                'Input de teste': input,
+                'Box de sugestões': suggestionsBox
+            };
+            
+            for (const [nome, elemento] of Object.entries(elements)) {
+                if (elemento) {
+                    showStatus(`✅ ${nome}: encontrado`, 'success');
+                } else {
+                    showStatus(`❌ ${nome}: NÃO encontrado`, 'error');
+                }
+            }
+            
+            // Teste 3: Verificar versão do main.js
+            const scripts = Array.from(document.getElementsByTagName('script'));
+            const mainScript = scripts.find(s => s.src.includes('main.js'));
+            if (mainScript) {
+                showStatus(`✅ main.js carregado: ${mainScript.src}`, 'success');
+            }
+            
+            showStatus('✅ Diagnóstico completo! Teste o campo acima.', 'success');
+        }
+        
+        function norm(s) {
+            return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+        
+        function buildSuggestions(term) {
+            if (!term) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+            
+            const normTerm = norm(term);
+            const matches = [];
+            
+            for (const v of veiculos) {
+                const searchFields = [v.placa, v.placaVinculada, v.prefixo, v.marcaModelo];
+                for (const field of searchFields) {
+                    if (field && norm(field).includes(normTerm)) {
+                        matches.push({
+                            label: `${field} — ${v.marcaModelo} (${v.prefixo || 'S/P'})`,
+                            veiculo: v
+                        });
+                        break;
+                    }
+                }
+                if (matches.length >= 10) break;
+            }
+            
+            if (matches.length === 0) {
+                suggestionsBox.style.display = 'none';
+                resultInfo.innerHTML = `<div class="info">⚠️ Nenhum veículo encontrado para "${term}"</div>`;
+                return;
+            }
+            
+            suggestionsBox.innerHTML = matches.map(m => 
+                `<div class="sugg-item">${m.label}</div>`
+            ).join('');
+            
+            suggestionsBox.style.display = 'block';
+            resultInfo.innerHTML = `<div class="info">✅ Encontrados ${matches.length} veículo(s)</div>`;
+            
+            // Adicionar eventos de clique
+            suggestionsBox.querySelectorAll('.sugg-item').forEach((el, idx) => {
+                el.addEventListener('click', () => {
+                    input.value = matches[idx].veiculo.placa;
+                    suggestionsBox.style.display = 'none';
+                    resultInfo.innerHTML = `<div class="info">✅ Selecionado: ${matches[idx].label}</div>`;
+                });
+            });
+        }
+        
+        // Eventos de input
+        input.addEventListener('input', () => buildSuggestions(input.value));
+        input.addEventListener('focus', () => buildSuggestions(input.value));
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                suggestionsBox.style.display = 'none';
+            }, 200);
+        });
+        
+        // Executar diagnóstico ao carregar
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostic, 500);
+        });
+    </script>
+</body>
+</html>

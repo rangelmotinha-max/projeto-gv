@@ -1,0 +1,83 @@
+#!/bin/bash
+# Script para deploy do sistema na porta 80
+# Execute com: sudo ./deploy-porta80.sh
+
+set -e  # Para em caso de erro
+
+PROJETO_DIR="/home/user/Downloads/sistemas/SISTEMAS/projeto-gv"
+PORTA=80
+USUARIO_ORIGINAL="${SUDO_USER:-$USER}"
+
+echo "=============================================="
+echo "  Deploy do Sistema de Gestão de Viaturas"
+echo "=============================================="
+echo ""
+
+# Verifica se está rodando como root
+if [ "$EUID" -ne 0 ]; then 
+   echo "❌ Este script precisa ser executado como root (use sudo)"
+   exit 1
+fi
+
+# Para qualquer processo rodando na porta 80
+echo "🔍 Verificando processos na porta $PORTA..."
+PID=$(lsof -ti :$PORTA 2>/dev/null || true)
+if [ -n "$PID" ]; then
+  echo "⚠️  Encontrado processo na porta $PORTA (PID: $PID)"
+  echo "🛑 Encerrando processo..."
+  kill -9 $PID 2>/dev/null || true
+  sleep 2
+  echo "✅ Processo encerrado"
+else
+  echo "ℹ️  Nenhum processo rodando na porta $PORTA"
+fi
+
+# Vai para o diretório do projeto
+cd "$PROJETO_DIR"
+
+echo ""
+echo "📦 Verificando dependências..."
+if [ ! -d "node_modules" ]; then
+  echo "⚠️  node_modules não encontrado. Instalando dependências..."
+  sudo -u "$USUARIO_ORIGINAL" npm install --production
+else
+  echo "✅ Dependências já instaladas"
+fi
+
+echo ""
+echo "🔧 Verificando banco de dados..."
+if [ ! -f "$PROJETO_DIR/data/sgv.sqlite" ]; then
+  echo "⚠️  Banco de dados não encontrado. Inicializando..."
+  node scripts/init-sqlite.js
+fi
+
+echo ""
+echo "🚀 Iniciando servidor na porta $PORTA..."
+echo ""
+
+# Inicia o servidor (porta 80 é padrão, não precisa especificar)
+npm start &
+SERVER_PID=$!
+
+# Aguarda alguns segundos
+sleep 3
+
+# Verifica se o servidor está rodando
+if ps -p $SERVER_PID > /dev/null 2>&1; then
+  echo ""
+  echo "✅ Servidor iniciado com sucesso!"
+  echo "=============================================="
+  echo "  🌐 Acesse: http://localhost:$PORTA"
+  echo "  🔑 PID do processo: $SERVER_PID"
+  echo "=============================================="
+  echo ""
+  echo "💡 Dicas:"
+  echo "  - Para parar: sudo kill $SERVER_PID"
+  echo "  - Logs em: terminal atual"
+  echo "  - Limpar cache do navegador: Ctrl+Shift+Del"
+  echo ""
+else
+  echo ""
+  echo "❌ Falha ao iniciar o servidor"
+  exit 1
+fi
