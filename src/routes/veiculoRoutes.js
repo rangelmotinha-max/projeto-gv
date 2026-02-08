@@ -29,6 +29,7 @@ router.delete('/veiculos/:id', veiculoController.excluir);
 router.post('/veiculos/:id/kms', express.json(), veiculoController.adicionarKm);
 router.get('/veiculos/:id/kms', veiculoController.listarKms);
 router.get('/veiculos/:id/kms/medias', veiculoController.mediasKms);
+router.put('/veiculos/:id/kms/:kmId', express.json(), veiculoController.atualizarKm);
 
 // Histórico de Saldo
 router.post('/veiculos/:id/saldos', express.json(), veiculoController.adicionarSaldo);

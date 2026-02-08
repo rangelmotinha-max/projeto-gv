@@ -1897,6 +1897,9 @@ if (userForm) {
 
   let veiculos = [];
 
+  const usuarioLogado = typeof getUsuarioLogado === 'function' ? getUsuarioLogado() : null;
+  const isAdmin = usuarioLogado?.perfil === 'ADMIN';
+
   const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const toDigits = (v = '') => String(v).replace(/\D/g, '');
 
@@ -2053,14 +2056,34 @@ if (userForm) {
         historySection.style.display = 'block';
         return;
       }
-
-      const linhas = ordenado.map(r => `
-        <tr>
-          <td>${formatDateTimeBR(r.dataLeitura)}</td>
-          <td>${r.km}</td>
-          <td>${(r.origem || '').toString().toUpperCase()}</td>
-        </tr>
-      `).join('');
+      let linhas = '';
+      if (!isAdmin) {
+        linhas = ordenado.map(r => `
+          <tr>
+            <td>${formatDateTimeBR(r.dataLeitura)}</td>
+            <td>${r.km}</td>
+            <td>${(r.origem || '').toString().toUpperCase()}</td>
+          </tr>
+        `).join('');
+      } else {
+        linhas = ordenado.map((r, idx) => {
+          const editavel = idx <= 2; // apenas os 3 últimos registros
+          return `
+            <tr data-km-id="${r.id}">
+              <td>${formatDateTimeBR(r.dataLeitura)}</td>
+              <td>
+                ${editavel
+                  ? `<input type="text" class="km-edit-input" value="${r.km}" style="width:100px;" />`
+                  : `${r.km}`}
+              </td>
+              <td>${(r.origem || '').toString().toUpperCase()}</td>
+              <td class="user-actions">
+                ${editavel ? '<button type="button" class="km-save">Salvar</button>' : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
 
       historyBox.innerHTML = `
         <table class="user-table">
@@ -2069,12 +2092,68 @@ if (userForm) {
               <th>Data/Hora</th>
               <th>KM</th>
               <th>Origem</th>
+              ${isAdmin ? '<th style="width:90px;">Ações</th>' : ''}
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
         </table>
       `;
       historySection.style.display = 'block';
+
+      if (isAdmin) {
+        historyBox.querySelectorAll('.km-save').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const tr = btn.closest('tr');
+            const kmId = tr?.getAttribute('data-km-id');
+            const input = tr?.querySelector('.km-edit-input');
+            const kmNovoNum = Number(toDigits(input?.value || ''));
+
+            if (!(kmNovoNum >= 0)) {
+              if (msgEl) {
+                msgEl.textContent = 'Informe um KM válido (somente números).';
+                msgEl.style.color = '#e74c3c';
+              }
+              return;
+            }
+
+            try {
+              const resUpdate = await fetch(`/api/v1/veiculos/${veiculoId}/kms/${kmId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ km: kmNovoNum }),
+              });
+              const dataUpdate = await resUpdate.json().catch(() => null);
+              if (!resUpdate.ok) {
+                if (msgEl) {
+                  msgEl.textContent = dataUpdate?.message || 'Erro ao atualizar KM.';
+                  msgEl.style.color = '#e74c3c';
+                } else {
+                  window.alert(dataUpdate?.message || 'Erro ao atualizar KM.');
+                }
+                return;
+              }
+
+              if (msgEl) {
+                msgEl.textContent = '';
+                msgEl.style.color = '#495057';
+              }
+
+              window.alert('km alterado com sucesso');
+
+              await carregarVeiculos();
+              await renderHistorico(veiculoId);
+            } catch (e) {
+              console.error(e);
+              if (msgEl) {
+                msgEl.textContent = 'Falha ao comunicar com o servidor.';
+                msgEl.style.color = '#e74c3c';
+              } else {
+                window.alert('Falha ao comunicar com o servidor.');
+              }
+            }
+          });
+        });
+      }
     } catch (e) {
       console.error(e);
       historyBox.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Erro ao carregar histórico.</p>';
@@ -2118,6 +2197,11 @@ if (userForm) {
       renderMatch(v);
       if (!v?.id) {
         if (msgEl) { msgEl.textContent = 'Veículo não encontrado.'; msgEl.style.color = '#e74c3c'; }
+        return;
+      }
+
+      if (typeof v.kmAtual === 'number' && !Number.isNaN(v.kmAtual) && km < v.kmAtual) {
+        window.alert('Km atual não pode ser inferior ao último km lançado');
         return;
       }
 

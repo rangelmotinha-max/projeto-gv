@@ -275,6 +275,90 @@ async function registrarLeituraKm(veiculoId, km, dataLeitura = null, origem = 'F
   await db.execute('UPDATE veiculos SET km_atual = ? WHERE id = ? AND (km_atual IS NULL OR km_atual < ?)', [km, veiculoId, km]);
 }
 
+async function atualizarLeituraKm(veiculoId, kmId, novoKm) {
+  const veiculoIdNum = Number(veiculoId);
+  const kmIdNum = Number(kmId);
+  if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0 || !Number.isInteger(kmIdNum) || kmIdNum <= 0) {
+    const err = new Error('Identificadores inválidos para veículo ou leitura de KM.');
+    err.status = 400;
+    throw err;
+  }
+
+  const [rowsAtual] = await db.query(
+    'SELECT id, veiculo_id AS veiculoId, km, data_leitura AS dataLeitura FROM veiculo_km_historico WHERE id = ? AND veiculo_id = ?',
+    [kmIdNum, veiculoIdNum]
+  );
+  if (!rowsAtual.length) {
+    const err = new Error('Leitura de KM não encontrada para este veículo.');
+    err.status = 404;
+    throw err;
+  }
+
+  const novoKmNum = Number(novoKm);
+  if (!Number.isFinite(novoKmNum) || novoKmNum < 0) {
+    const err = new Error('Informe um KM válido.');
+    err.status = 400;
+    throw err;
+  }
+
+  // Garante que somente uma das 3 últimas leituras possa ser alterada
+  const [ultimos] = await db.query(
+    'SELECT id FROM veiculo_km_historico WHERE veiculo_id = ? ORDER BY data_leitura DESC, id DESC LIMIT 3',
+    [veiculoIdNum]
+  );
+  const permitido = ultimos.some((r) => r.id === kmIdNum);
+  if (!permitido) {
+    const err = new Error('Só é permitido alterar um dos 3 últimos registros de KM.');
+    err.status = 400;
+    throw err;
+  }
+
+  // Busca todas as leituras para validar a sequência do hodômetro
+  const [todas] = await db.query(
+    'SELECT id, km, data_leitura AS dataLeitura FROM veiculo_km_historico WHERE veiculo_id = ? ORDER BY data_leitura ASC, id ASC',
+    [veiculoIdNum]
+  );
+
+  const idx = todas.findIndex((r) => r.id === kmIdNum);
+  if (idx === -1) {
+    const err = new Error('Leitura de KM não encontrada para este veículo.');
+    err.status = 404;
+    throw err;
+  }
+
+  const anterior = idx > 0 ? todas[idx - 1] : null;
+  const proximo = idx < todas.length - 1 ? todas[idx + 1] : null;
+
+  if (anterior && novoKmNum < (anterior.km || 0)) {
+    const err = new Error('Km inferior ao último registrado.');
+    err.status = 400;
+    throw err;
+  }
+
+  if (proximo && novoKmNum > (proximo.km || 0)) {
+    const err = new Error('Km inválido: superior ao próximo registro da sequência.');
+    err.status = 400;
+    throw err;
+  }
+
+  await db.execute(
+    'UPDATE veiculo_km_historico SET km = ? WHERE id = ? AND veiculo_id = ?',
+    [novoKmNum, kmIdNum, veiculoIdNum]
+  );
+
+  // Recalcula o km_atual do veículo com base na última leitura existente
+  const [lastRows] = await db.query(
+    'SELECT km FROM veiculo_km_historico WHERE veiculo_id = ? ORDER BY data_leitura DESC, id DESC LIMIT 1',
+    [veiculoIdNum]
+  );
+  if (lastRows.length) {
+    const kmAtual = lastRows[0].km || 0;
+    await db.execute('UPDATE veiculos SET km_atual = ? WHERE id = ?', [kmAtual, veiculoIdNum]);
+  }
+
+  return { id: kmIdNum, veiculoId: veiculoIdNum, km: novoKmNum };
+}
+
 async function listarLeiturasKm(veiculoId, inicio = null, fim = null) {
   const where = ['veiculo_id = ?'];
   const params = [veiculoId];
@@ -363,6 +447,7 @@ module.exports = {
   registrarLeituraKm,
   listarLeiturasKm,
   obterMediasKm,
+   atualizarLeituraKm,
   registrarLeituraSaldo,
   listarLeiturasSaldo,
 };
