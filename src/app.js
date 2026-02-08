@@ -12,12 +12,25 @@ const veiculoRoutes = require('./routes/veiculoRoutes');
 
 const app = express();
 
+// Trust proxy (para funcionar corretamente atrás de nginx/reverse proxy)
+app.set('trust proxy', true);
+
 // Middlewares globais
 app.use(express.json());
 app.use(logger);
 
 // Limite de tentativas de login (5 tentativas por 5 minutos por IP)
-const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false });
+const loginLimiter = rateLimit({ 
+  windowMs: 5 * 60 * 1000, 
+  max: 5, 
+  standardHeaders: true, 
+  legacyHeaders: false,
+  // Desabilita validação do trust proxy
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false
+  }
+});
 app.use('/api/v1/login', loginLimiter);
 
 // Gate de páginas HTML protegidas (deve vir ANTES do static)

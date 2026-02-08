@@ -1,0 +1,50 @@
+nohup: ignorando entrada
+Servidor rodando em http://localhost:3001
+GET /api/v1/health - 8.43ms
+GET / - 6.64ms
+GET /?id=914ecc43-0039-41af-a326-a07076b9507f&vscodeBrowserReqId=1770312345670 - 2.24ms
+GET /css/styles.css - 3.16ms
+GET /js/main.js - 5.85ms
+GET / - 4.10ms
+GET /css/styles.css - 2.80ms
+GET /js/main.js - 3.11ms
+GET /favicon.ico - 2.16ms
+[auth] login OK {
+  id: 18,
+  matricula: '01999605',
+  condicao: 'senhaDigitsDb === senhaDigitsReq',
+  resultado: true
+}
+POST /api/v1/login - 8.28ms
+GET /lancar-km.html - 3.08ms
+GET /css/styles.css - 3.24ms
+GET /js/main.js - 1.11ms
+GET /api/v1/veiculos - 7.54ms
+GET / - 4.16ms
+GET /api/v1/health - 0.90ms
+GET / - 3.35ms
+HEAD / - 0.67ms
+GET / - 1.06ms
+GET /lancar-km.html - 1.44ms
+GET /css/styles.css - 1.17ms
+GET /js/main.js - 0.58ms
+GET /api/v1/veiculos - 3.84ms
+GET / - 0.96ms
+GET / - 1.79ms
+GET /css/styles.css - 2.71ms
+GET /js/main.js - 0.77ms
+GET / - 1.89ms
+GET /css/styles.css - 1.30ms
+GET /js/main.js - 1.05ms
+GET / - 0.64ms
+GET /js/main.js - 2.33ms
+GET /css/styles.css - 1.24ms
+GET / - 2.30ms
+GET /css/styles.css - 0.86ms
+GET /js/main.js - 0.82ms
+GET / - 2.43ms
+GET /css/styles.css - 1.87ms
+GET /js/main.js - 1.03ms
+GET / - 1.69ms
+GET /css/styles.css - 0.90ms
+GET /js/main.js - 0.62ms
