@@ -1,29 +1,35 @@
 const express = require('express');
 const veiculoController = require('../controllers/veiculoController');
 const upload = require('../middlewares/upload');
+const { requireRoles } = require('../middlewares/auth');
 
 const router = express.Router();
 
 // /api/v1/veiculos
 router.get('/veiculos', veiculoController.listar);
+// Criação de veículo (somente ADMIN/EDITOR)
 router.post(
 	'/veiculos',
+	requireRoles(['ADMIN', 'EDITOR']),
 	upload.fields([
 		{ name: 'fotos', maxCount: 12 },
 		{ name: 'manual', maxCount: 1 },
 	]),
 	veiculoController.criar
 );
+// Atualização de veículo (somente ADMIN/EDITOR)
 router.put(
 	'/veiculos/:id',
+	requireRoles(['ADMIN', 'EDITOR']),
 	upload.fields([
 		{ name: 'fotos', maxCount: 12 },
 		{ name: 'manual', maxCount: 1 },
 	]),
 	veiculoController.atualizar
 );
-router.delete('/veiculos/:id/fotos/:fotoId', veiculoController.excluirFoto);
-router.delete('/veiculos/:id', veiculoController.excluir);
+// Exclusões (somente ADMIN/EDITOR)
+router.delete('/veiculos/:id/fotos/:fotoId', requireRoles(['ADMIN', 'EDITOR']), veiculoController.excluirFoto);
+router.delete('/veiculos/:id', requireRoles(['ADMIN', 'EDITOR']), veiculoController.excluir);
 
 // Histórico de KM
 router.post('/veiculos/:id/kms', express.json(), veiculoController.adicionarKm);

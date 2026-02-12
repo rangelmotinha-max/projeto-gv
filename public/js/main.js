@@ -431,10 +431,15 @@ if (forgotPasswordLink && forgotPasswordModal) {
   let editId = null; // id do veículo em edição
   let isCadastroReadOnly = false;
 
-  // Obtém o perfil atual de forma tardia para evitar dependência de ordem de declaração.
+  // Obtém o perfil atual diretamente do localStorage para confiabilidade.
   const isPerfilLeitor = () => {
-    const usuarioLogado = typeof getUsuarioLogado === 'function' ? getUsuarioLogado() : null;
-    return usuarioLogado?.perfil === 'LEITOR';
+    try {
+      const raw = localStorage.getItem('sgv_usuario_logado');
+      const u = raw ? JSON.parse(raw) : null;
+      return String(u?.perfil || '').trim().toUpperCase() === 'LEITOR';
+    } catch {
+      return false;
+    }
   };
 
   // Controla o formulário de cadastro entre modo de edição normal e somente leitura.
@@ -486,8 +491,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
 
     if (!isBeforeInputDelete && !isKeyDelete) return;
 
+    // Em modo leitura, apenas bloqueia a ação sem exibir alerta imediato.
     event.preventDefault();
-    window.alert(MSG_ACESSO_NEGADO);
   };
 
   // Campos editáveis do cadastro ficam protegidos contra deleção no modo leitura.
@@ -813,7 +818,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         <td>${v.condutorAtual || '-'}</td>
         <td><span class="${sv.cls}">${sv.label}</span></td>
         <td class="user-actions">
-          <button type="button" class="edit" data-index="${idx}">Editar</button>
+          <button type="button" class="edit" data-index="${idx}">Abrir</button>
           <button type="button" class="delete" data-index="${idx}">Excluir</button>
         </td>
       </tr>
@@ -912,7 +917,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         }
         setCadastroReadOnly(isPerfilLeitor());
         if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
-        if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+        if (msgEl) { msgEl.textContent = isPerfilLeitor() ? 'Visualizando veículo (somente leitura)' : 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
       });
     });
   };
@@ -1109,7 +1114,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
       }
       setCadastroReadOnly(isPerfilLeitor());
       if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
-      if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+      if (msgEl) { msgEl.textContent = isPerfilLeitor() ? 'Visualizando veículo (somente leitura)' : 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
     } catch (e) {
       console.error(e);
     }
@@ -1204,7 +1209,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         <td>${v.condutorAtual || '-'}</td>
         <td><span class="${sv.cls}">${sv.label}</span></td>
         <td class="user-actions">
-          <button type="button" class="edit" data-id="${v.id}">Editar</button>
+          <button type="button" class="edit" data-id="${v.id}">Abrir</button>
           <button type="button" class="delete" data-id="${v.id}">Excluir</button>
         </td>
       </tr>
