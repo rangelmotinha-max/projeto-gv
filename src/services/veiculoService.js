@@ -486,23 +486,25 @@ async function listarLeiturasSaldo(veiculoId, inicio = null, fim = null) {
 // ===== Alterações de Veículo =====
 async function listarAlteracoes(veiculoId) {
   const [rows] = await db.query(
-    `SELECT id, vehicle_id AS vehicleId, odometer_entry_id AS odometerEntryId,
-            change_date AS changeDate, description,
-            created_at AS createdAt, updated_at AS updatedAt
-     FROM vehicle_changes
-     WHERE vehicle_id = ?
-     ORDER BY change_date DESC, id DESC`,
+    `SELECT vc.id, vc.vehicle_id AS vehicleId, vc.odometer_entry_id AS odometerEntryId,
+            vc.change_date AS changeDate, vc.description,
+            vc.created_at AS createdAt, vc.updated_at AS updatedAt,
+            u.nome_completo AS userName, u.id AS userId
+     FROM vehicle_changes vc
+     LEFT JOIN usuarios u ON u.id = vc.user_id
+     WHERE vc.vehicle_id = ?
+     ORDER BY vc.change_date DESC, vc.id DESC`,
     [veiculoId]
   );
   return rows;
 }
 
-async function criarAlteracao(veiculoId, changeDate, description, odometerEntryId = null) {
+async function criarAlteracao(veiculoId, changeDate, description, odometerEntryId = null, userId = null) {
   const sql = `INSERT INTO vehicle_changes
-    (vehicle_id, odometer_entry_id, change_date, description, created_at, updated_at)
-    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`;
-  const [res] = await db.execute(sql, [veiculoId, odometerEntryId || null, changeDate, description]);
-  return { id: res.insertId, vehicleId: Number(veiculoId), odometerEntryId: odometerEntryId || null, changeDate, description };
+    (vehicle_id, odometer_entry_id, change_date, description, user_id, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`;
+  const [res] = await db.execute(sql, [veiculoId, odometerEntryId || null, changeDate, description, userId || null]);
+  return { id: res.insertId, vehicleId: Number(veiculoId), odometerEntryId: odometerEntryId || null, changeDate, description, userId: userId || null };
 }
 
 module.exports = {

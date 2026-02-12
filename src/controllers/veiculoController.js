@@ -292,7 +292,9 @@ async function adicionarKm(req, res, next) {
     // Se o cliente enviou dados de alteração, registrar (permitido também para LEITOR no fluxo de KM)
     if (change_date && description && String(change_date).trim() && String(description).trim()) {
       try {
-        await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), kmRes?.id || null);
+        const sess = getSession(req);
+        const userId = sess?.id || null;
+        await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), kmRes?.id || null, userId);
       } catch (err) {
         console.warn('Falha ao registrar alteração vinculada ao KM:', err?.message || err);
       }
@@ -444,7 +446,9 @@ async function criarAlteracao(req, res, next) {
     if (!description || !String(description).trim()) {
       return res.status(400).json({ message: 'Informe a descrição da alteração.' });
     }
-    const created = await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), null);
+    const sess = req.sessionUser || getSession(req);
+    const userId = sess?.id || null;
+    const created = await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), null, userId);
     res.status(201).json(created);
   } catch (e) {
     next(e);

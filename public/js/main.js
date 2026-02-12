@@ -797,14 +797,16 @@ if (forgotPasswordLink && forgotPasswordModal) {
           <tr>
             <td>${String(r.changeDate || '-')}</td>
             <td>${String(r.description || '').replace(/</g,'&lt;')}</td>
+            <td>${String(r.userName || '-')}</td>
           </tr>
         `).join('');
         changesList.innerHTML = `
           <table class="user-table">
             <thead>
               <tr>
-                <th>Data</th>
+                <th>Data da Alteração</th>
                 <th>Descrição</th>
+                <th>Usuário</th>
               </tr>
             </thead>
             <tbody>${linhas}</tbody>
