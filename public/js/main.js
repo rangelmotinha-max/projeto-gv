@@ -426,6 +426,49 @@ if (forgotPasswordLink && forgotPasswordModal) {
 
   let veiculos = [];
   let editId = null; // id do veículo em edição
+  let isCadastroReadOnly = false;
+
+  // Obtém o perfil atual de forma tardia para evitar dependência de ordem de declaração.
+  const isPerfilLeitor = () => {
+    const usuarioLogado = typeof getUsuarioLogado === 'function' ? getUsuarioLogado() : null;
+    return usuarioLogado?.perfil === 'LEITOR';
+  };
+
+  // Controla o formulário de cadastro entre modo de edição normal e somente leitura.
+  const setCadastroReadOnly = (isReadOnly) => {
+    isCadastroReadOnly = !!isReadOnly;
+
+    // Inputs text/number/date e textarea recebem readOnly; selects/files recebem disabled.
+    form
+      .querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea')
+      .forEach((field) => {
+        field.readOnly = isCadastroReadOnly;
+      });
+
+    form
+      .querySelectorAll('select, input[type="file"]')
+      .forEach((field) => {
+        field.disabled = isCadastroReadOnly;
+      });
+
+    // Botão de submit fica bloqueado no modo leitura com rótulo explícito.
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      if (isCadastroReadOnly) {
+        if (!submitBtn.dataset.prevLabel) submitBtn.dataset.prevLabel = submitBtn.textContent || 'Salvar alterações';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Somente leitura';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtn.dataset.prevLabel || 'Salvar';
+      }
+    }
+
+    // Em LEITOR, botão limpar fica desabilitado para não sugerir edição ativa.
+    if (btnLimpar) {
+      btnLimpar.disabled = isCadastroReadOnly;
+    }
+  };
 
   const searchInput = document.getElementById('veh-search');
   let termoBusca = '';
@@ -467,6 +510,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
     const selected = [];
     let existing = [];
     let currentVeiculoId = null;
+    let readOnlyMode = false;
 
     const setErro = (mensagem) => {
       if (!msgEl) return;
@@ -518,7 +562,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       excluir.type = 'button';
       excluir.className = 'fotos-preview__action fotos-preview__action--delete';
       excluir.textContent = 'Excluir';
+      excluir.disabled = readOnlyMode;
       excluir.addEventListener('click', async () => {
+        // Em modo leitura, bloqueia exclusão de foto existente.
+        if (readOnlyMode) return;
         if (!currentVeiculoId || !foto?.id) return;
         const confirmado = window.confirm('Deseja realmente excluir esse registro?');
         if (!confirmado) return;
@@ -560,7 +607,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       remover.type = 'button';
       remover.className = 'fotos-preview__remove';
       remover.textContent = 'Remover';
+      remover.disabled = readOnlyMode;
       remover.addEventListener('click', () => {
+        // Em modo leitura, bloqueia remoção de novas imagens.
+        if (readOnlyMode) return;
         const [removido] = selected.splice(index, 1);
         if (removido?.previewUrl) URL.revokeObjectURL(removido.previewUrl);
         renderizar();
@@ -581,6 +631,8 @@ if (forgotPasswordLink && forgotPasswordModal) {
     };
 
     const adicionarArquivos = (arquivos) => {
+      // Em modo leitura, bloqueia upload de novos arquivos.
+      if (readOnlyMode) return;
       limparErro();
       const lista = Array.from(arquivos || []);
       const erros = [];
@@ -636,6 +688,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
         currentVeiculoId = veiculoId;
         renderizar();
       },
+      setReadOnly: (isReadOnly) => {
+        // Reflete o estado do formulário no bloco de fotos.
+        readOnlyMode = !!isReadOnly;
+        inputEl.disabled = readOnlyMode;
+        renderizar();
+      },
       limpar: () => {
         selected.forEach((item) => {
           if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -656,6 +714,9 @@ if (forgotPasswordLink && forgotPasswordModal) {
     maxCount: 12,
     maxSizeMb: 10,
   });
+
+  // Estado inicial: formulário permanece editável até entrar em fluxo de edição do LEITOR.
+  if (fotosHandler) fotosHandler.setReadOnly(false);
 
   const carregar = async () => {
     try {
@@ -806,7 +867,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
         }
         form.setAttribute('data-edit-id', String(editId));
         const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+        if (submitBtn) {
+          submitBtn.textContent = 'Salvar alterações';
+          submitBtn.dataset.prevLabel = 'Salvar alterações';
+        }
+        setCadastroReadOnly(isPerfilLeitor());
+        if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
         if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
       });
     });
@@ -907,7 +973,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
       if (fotosHandler) fotosHandler.limpar();
       editId = null; form.removeAttribute('data-edit-id');
       const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = 'Salvar';
+      if (submitBtn) {
+        submitBtn.textContent = 'Salvar';
+        submitBtn.dataset.prevLabel = 'Salvar';
+      }
+      setCadastroReadOnly(false);
+      if (fotosHandler) fotosHandler.setReadOnly(false);
       await carregar();
       render();
     } catch (e) {
@@ -921,7 +992,13 @@ if (forgotPasswordLink && forgotPasswordModal) {
       if (fotosHandler) fotosHandler.limpar();
       editId = null; form.removeAttribute('data-edit-id');
       const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = 'Salvar';
+      if (submitBtn) {
+        submitBtn.textContent = 'Salvar';
+        submitBtn.dataset.prevLabel = 'Salvar';
+      }
+      // Mantém o estado de leitura quando aplicável para evitar reativar edição.
+      setCadastroReadOnly(isCadastroReadOnly);
+      if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
       if (msgEl) msgEl.textContent = '';
     });
   }
@@ -987,7 +1064,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
       }
       form.setAttribute('data-edit-id', String(editId));
       const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+      if (submitBtn) {
+        submitBtn.textContent = 'Salvar alterações';
+        submitBtn.dataset.prevLabel = 'Salvar alterações';
+      }
+      setCadastroReadOnly(isPerfilLeitor());
+      if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
       if (msgEl) { msgEl.textContent = 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
     } catch (e) {
       console.error(e);
