@@ -79,6 +79,36 @@ window.showToast = (msg = '') => {
   });
 })();
 
+// ===== Menu móvel (off-canvas) =====
+(() => {
+  const ensureOverlay = () => {
+    let ov = document.querySelector('.mobile-overlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.className = 'mobile-overlay';
+      document.body.appendChild(ov);
+    }
+    return ov;
+  };
+
+  const btn = document.getElementById('mobile-menu-toggle');
+  if (!btn) return; // só páginas do dashboard
+  const overlay = ensureOverlay();
+
+  const closeSidebar = () => {
+    document.body.classList.remove('sidebar-open');
+  };
+  const openSidebar = () => {
+    document.body.classList.add('sidebar-open');
+  };
+
+  btn.addEventListener('click', () => {
+    const opened = document.body.classList.contains('sidebar-open');
+    if (opened) closeSidebar(); else openSidebar();
+  });
+  overlay.addEventListener('click', closeSidebar);
+})();
+
 // Recuperação de senha (modal)
 const forgotPasswordLink = document.getElementById('forgot-password-link');
 const forgotPasswordModal = document.getElementById('forgot-password-modal');

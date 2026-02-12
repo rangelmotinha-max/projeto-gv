@@ -56,6 +56,9 @@
 
       <main class="main-content">
         <header class="topbar">
+          <button class="menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
           <h1 class="topbar-title">Lançar Saldo</h1>
           <div class="topbar-right">
             <span class="user-name" id="topbar-user-name">Usuário</span>
@@ -66,7 +69,7 @@
           <form id="saldo-form">
             <div class="form-row">
               <div class="form-field">
-                <label for="saldo-ref">Placa / Placa Vinculada / Prefixo / Marca/Modelo</label>
+                <label for="saldo-ref">Placa, Prefixo, Modelo</label>
                 <div style="position: relative;">
                   <input type="text" id="saldo-ref" placeholder="ABC1D23, ABC-1234, PRF-001 ou Hilux" autocomplete="off" required />
                   <div id="saldo-suggestions" style="position:absolute; z-index: 10; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-top:none; display:none; max-height:220px; overflow:auto;"></div>
