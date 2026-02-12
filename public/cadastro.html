@@ -199,6 +199,27 @@
           <h2 class="section-title">Veículos cadastrados</h2>
           <div id="vehicle-list-container"></div>
         </section>
+
+        <section class="section-block" id="vehicle-changes-section" style="display:none; margin-top: 16px;">
+          <h2 class="section-title">Alterações do veículo</h2>
+          <div id="vehicle-changes-list" style="margin-bottom: 12px;"></div>
+          <form id="vehicle-change-form" style="display: none;">
+            <div class="form-row">
+              <div class="form-field">
+                <label for="veic-change-date">Data da alteração</label>
+                <input type="date" id="veic-change-date" />
+              </div>
+              <div class="form-field full-width">
+                <label for="veic-change-desc">Descrição</label>
+                <textarea id="veic-change-desc" rows="2" placeholder="Ex.: Troca de óleo e filtro"></textarea>
+              </div>
+            </div>
+            <div class="form-actions" style="justify-content: flex-end;">
+              <button type="submit" class="btn-primary">Registrar alteração</button>
+            </div>
+            <div id="veic-change-message" class="form-message"></div>
+          </form>
+        </section>
       </main>
     </div>
 

@@ -269,10 +269,11 @@ async function registrarLeituraKm(veiculoId, km, dataLeitura = null, origem = 'F
   const sql = 'INSERT INTO veiculo_km_historico (veiculo_id, km, data_leitura, origem) VALUES (?, ?, ?, ?)';
   const when = dataLeitura ? new Date(dataLeitura) : new Date();
   const ts = when.toISOString().slice(0, 19).replace('T', ' ');
-  await db.execute(sql, [veiculoId, km, ts, origem]);
+  const [res] = await db.execute(sql, [veiculoId, km, ts, origem]);
 
   // Atualiza km_atual se maior
   await db.execute('UPDATE veiculos SET km_atual = ? WHERE id = ? AND (km_atual IS NULL OR km_atual < ?)', [km, veiculoId, km]);
+  return { id: res.insertId, veiculoId: Number(veiculoId), km, dataLeitura: ts, origem };
 }
 
 async function atualizarLeituraKm(veiculoId, kmId, novoKm) {
@@ -482,6 +483,28 @@ async function listarLeiturasSaldo(veiculoId, inicio = null, fim = null) {
   return rows;
 }
 
+// ===== Alterações de Veículo =====
+async function listarAlteracoes(veiculoId) {
+  const [rows] = await db.query(
+    `SELECT id, vehicle_id AS vehicleId, odometer_entry_id AS odometerEntryId,
+            change_date AS changeDate, description,
+            created_at AS createdAt, updated_at AS updatedAt
+     FROM vehicle_changes
+     WHERE vehicle_id = ?
+     ORDER BY change_date DESC, id DESC`,
+    [veiculoId]
+  );
+  return rows;
+}
+
+async function criarAlteracao(veiculoId, changeDate, description, odometerEntryId = null) {
+  const sql = `INSERT INTO vehicle_changes
+    (vehicle_id, odometer_entry_id, change_date, description, created_at, updated_at)
+    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`;
+  const [res] = await db.execute(sql, [veiculoId, odometerEntryId || null, changeDate, description]);
+  return { id: res.insertId, vehicleId: Number(veiculoId), odometerEntryId: odometerEntryId || null, changeDate, description };
+}
+
 module.exports = {
   listar,
   criar,
@@ -497,4 +520,6 @@ module.exports = {
   registrarLeituraSaldo,
   atualizarLeituraSaldo,
   listarLeiturasSaldo,
+  listarAlteracoes,
+  criarAlteracao,
 };

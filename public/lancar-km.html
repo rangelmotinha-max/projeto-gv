@@ -80,6 +80,23 @@
                 <input type="text" id="km-valor" inputmode="numeric" placeholder="Somente números" required />
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="km-change-enable" /> Registrar alteração
+                </label>
+              </div>
+            </div>
+            <div id="km-change-fields" class="form-row" style="display:none; gap: 8px;">
+              <div class="form-field">
+                <label for="km-change-date">Data da alteração</label>
+                <input type="date" id="km-change-date" />
+              </div>
+              <div class="form-field full-width">
+                <label for="km-change-desc">Descrição</label>
+                <textarea id="km-change-desc" rows="2" placeholder="Ex.: Troca de óleo e filtro"></textarea>
+              </div>
+            </div>
             <div id="km-form-message" class="form-message"></div>
             <div class="form-actions">
               <button type="submit" class="btn-primary">Registrar KM</button>

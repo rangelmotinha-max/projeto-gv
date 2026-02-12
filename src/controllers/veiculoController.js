@@ -282,13 +282,23 @@ async function excluirFoto(req, res, next) {
 async function adicionarKm(req, res, next) {
   try {
     const { id } = req.params;
-    const { km, dataLeitura } = req.body;
+    const { km, dataLeitura, change_date, description } = req.body;
     const kmNum = Number(km);
     if (Number.isNaN(kmNum) || kmNum < 0) {
       return res.status(400).json({ message: 'Informe um KM válido.' });
     }
-    await veiculoService.registrarLeituraKm(id, kmNum, dataLeitura || null, 'MANUAL');
-    res.status(201).json({ veiculoId: Number(id), km: kmNum, dataLeitura: dataLeitura || new Date().toISOString() });
+    const kmRes = await veiculoService.registrarLeituraKm(id, kmNum, dataLeitura || null, 'MANUAL');
+
+    // Se o cliente enviou dados de alteração, registrar (permitido também para LEITOR no fluxo de KM)
+    if (change_date && description && String(change_date).trim() && String(description).trim()) {
+      try {
+        await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), kmRes?.id || null);
+      } catch (err) {
+        console.warn('Falha ao registrar alteração vinculada ao KM:', err?.message || err);
+      }
+    }
+
+    res.status(201).json({ veiculoId: Number(id), km: kmNum, dataLeitura: kmRes?.dataLeitura || dataLeitura || new Date().toISOString(), kmId: kmRes?.id });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ message: e.message });
     next(e);
@@ -410,3 +420,36 @@ async function atualizarKm(req, res, next) {
 }
 
 module.exports = { listar, criar, atualizar, excluir, excluirFoto, adicionarKm, listarKms, mediasKms, adicionarSaldo, listarSaldos, atualizarSaldo, atualizarKm };
+// ===== Alterações de Veículo =====
+async function listarAlteracoes(req, res, next) {
+  try {
+    const { id } = req.params;
+    const rows = await veiculoService.listarAlteracoes(id);
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function criarAlteracao(req, res, next) {
+  try {
+    if (isPerfilLeitor(req)) {
+      return res.status(403).json({ message: MSG_ACESSO_NEGADO_LEITOR });
+    }
+    const { id } = req.params;
+    const { change_date, description } = req.body || {};
+    if (!change_date || !String(change_date).trim()) {
+      return res.status(400).json({ message: 'Informe a data da alteração (YYYY-MM-DD).' });
+    }
+    if (!description || !String(description).trim()) {
+      return res.status(400).json({ message: 'Informe a descrição da alteração.' });
+    }
+    const created = await veiculoService.criarAlteracao(id, String(change_date).trim(), String(description).trim(), null);
+    res.status(201).json(created);
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports.listarAlteracoes = listarAlteracoes;
+module.exports.criarAlteracao = criarAlteracao;

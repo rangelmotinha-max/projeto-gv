@@ -424,6 +424,12 @@ if (forgotPasswordLink && forgotPasswordModal) {
   const btnListar = document.getElementById('veh-btn-listar');
   const msgEl = document.getElementById('vehicle-form-message');
   const btnLimpar = document.getElementById('veh-btn-limpar');
+  const changesSection = document.getElementById('vehicle-changes-section');
+  const changesList = document.getElementById('vehicle-changes-list');
+  const changeForm = document.getElementById('vehicle-change-form');
+  const changeDate = document.getElementById('veic-change-date');
+  const changeDesc = document.getElementById('veic-change-desc');
+  const changeMsg = document.getElementById('veic-change-message');
 
   if (!form) return; // só executa na página cadastro.html
 
@@ -475,6 +481,15 @@ if (forgotPasswordLink && forgotPasswordModal) {
     // Em LEITOR, botão limpar fica desabilitado para não sugerir edição ativa.
     if (btnLimpar) {
       btnLimpar.disabled = isCadastroReadOnly;
+    }
+
+    // Form de alterações manual também segue regras de leitura.
+    if (changeForm) {
+      if (isCadastroReadOnly) {
+        changeForm.querySelectorAll('input, textarea, button').forEach(el => { el.disabled = true; });
+      } else {
+        changeForm.querySelectorAll('input, textarea, button').forEach(el => { el.disabled = false; });
+      }
     }
   };
 
@@ -768,6 +783,45 @@ if (forgotPasswordLink && forgotPasswordModal) {
     }
   };
 
+  // Renderiza alterações do veículo selecionado
+  const renderAlteracoes = async (veiculoId) => {
+    if (!changesSection || !changesList) return;
+    try {
+      const res = await fetch(`/api/v1/veiculos/${veiculoId}/alteracoes`);
+      if (!res.ok) throw new Error('Falha ao carregar alterações');
+      const rows = await res.json();
+      if (!rows.length) {
+        changesList.innerHTML = '<p style="font-size:14px;color:#6c757d;">Sem alterações registradas.</p>';
+      } else {
+        const linhas = rows.map(r => `
+          <tr>
+            <td>${String(r.changeDate || '-')}</td>
+            <td>${String(r.description || '').replace(/</g,'&lt;')}</td>
+          </tr>
+        `).join('');
+        changesList.innerHTML = `
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+              </tr>
+            </thead>
+            <tbody>${linhas}</tbody>
+          </table>
+        `;
+      }
+      changesSection.style.display = 'block';
+      if (changeForm) {
+        changeForm.style.display = isPerfilLeitor() ? 'none' : 'block';
+      }
+    } catch (e) {
+      console.error(e);
+      changesList.innerHTML = '<p style="font-size:14px;color:#e74c3c;">Erro ao carregar alterações.</p>';
+      changesSection.style.display = 'block';
+    }
+  };
+
   const render = () => {
     if (!listContainer || !listSection) return;
     if (!veiculos.length) {
@@ -918,6 +972,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
         setCadastroReadOnly(isPerfilLeitor());
         if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
         if (msgEl) { msgEl.textContent = isPerfilLeitor() ? 'Visualizando veículo (somente leitura)' : 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+        renderAlteracoes(editId);
       });
     });
   };
@@ -1054,6 +1109,48 @@ if (forgotPasswordLink && forgotPasswordModal) {
     });
   }
 
+  // Submissão de alteração manual
+  if (changeForm) {
+    changeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (changeMsg) { changeMsg.textContent = 'Enviando...'; changeMsg.style.color = '#495057'; }
+      if (!editId) {
+        if (changeMsg) { changeMsg.textContent = 'Selecione um veículo.'; changeMsg.style.color = '#e74c3c'; }
+        return;
+      }
+      if (isPerfilLeitor()) {
+        window.alert('Acesso negado. Contate o administrador do sistema!');
+        return;
+      }
+      const cd = String(changeDate?.value || '').trim();
+      const ds = String(changeDesc?.value || '').trim();
+      if (!cd || !ds) {
+        if (changeMsg) { changeMsg.textContent = 'Preencha data e descrição.'; changeMsg.style.color = '#e74c3c'; }
+        return;
+      }
+      try {
+        const res = await fetch(`/api/v1/veiculos/${editId}/alteracoes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ change_date: cd, description: ds }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          if (changeMsg) { changeMsg.textContent = data?.message || 'Erro ao registrar alteração.'; changeMsg.style.color = '#e74c3c'; }
+          return;
+        }
+        if (changeDate) changeDate.value = '';
+        if (changeDesc) changeDesc.value = '';
+        if (changeMsg) { changeMsg.textContent = ''; changeMsg.style.color = '#495057'; }
+        renderAlteracoes(editId);
+        window.alert('Alteração registrada com sucesso');
+      } catch (err) {
+        console.error(err);
+        if (changeMsg) { changeMsg.textContent = 'Falha ao comunicar com o servidor.'; changeMsg.style.color = '#e74c3c'; }
+      }
+    });
+  }
+
   // Atualiza a lista após salvamentos feitos em outras lógicas
   document.addEventListener('vehicle-saved', async () => {
     await carregar();
@@ -1115,6 +1212,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
       setCadastroReadOnly(isPerfilLeitor());
       if (fotosHandler) fotosHandler.setReadOnly(isCadastroReadOnly);
       if (msgEl) { msgEl.textContent = isPerfilLeitor() ? 'Visualizando veículo (somente leitura)' : 'Editando veículo selecionado.'; msgEl.style.color = '#495057'; }
+      renderAlteracoes(editId);
     } catch (e) {
       console.error(e);
     }
@@ -2050,6 +2148,10 @@ if (userForm) {
   const suggBox = document.getElementById('km-suggestions');
   const historySection = document.getElementById('km-history-section');
   const historyBox = document.getElementById('km-history');
+  const changeEnable = document.getElementById('km-change-enable');
+  const changeFields = document.getElementById('km-change-fields');
+  const changeDateInput = document.getElementById('km-change-date');
+  const changeDescInput = document.getElementById('km-change-desc');
 
   let veiculos = [];
 
@@ -2121,6 +2223,13 @@ if (userForm) {
 
   // Pré-carregar lista
   carregarVeiculos();
+
+  // Exibir/ocultar campos de alteração
+  if (changeEnable && changeFields) {
+    changeEnable.addEventListener('change', () => {
+      changeFields.style.display = changeEnable.checked ? 'flex' : 'none';
+    });
+  }
 
   // ===== Autocomplete =====
   const buildSuggestions = (termRaw) => {
@@ -2347,6 +2456,12 @@ if (userForm) {
     const erros = [];
     if (!ref) erros.push('Informe a referência do veículo.');
     if (!(km >= 0)) erros.push('Informe um KM válido (somente números).');
+    if (changeEnable?.checked) {
+      const cd = String(changeDateInput?.value || '').trim();
+      const ds = String(changeDescInput?.value || '').trim();
+      if (!cd) erros.push('Informe a data da alteração.');
+      if (!ds) erros.push('Informe a descrição da alteração.');
+    }
     if (erros.length) {
       if (msgEl) { msgEl.textContent = erros[0]; msgEl.style.color = '#e74c3c'; }
       return;
@@ -2366,10 +2481,15 @@ if (userForm) {
         return;
       }
 
+      const payload = { km };
+      if (changeEnable?.checked) {
+        payload.change_date = String(changeDateInput?.value || '').trim();
+        payload.description = String(changeDescInput?.value || '').trim();
+      }
       const res = await fetch(`/api/v1/veiculos/${v.id}/kms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ km }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -2379,6 +2499,10 @@ if (userForm) {
 
       window.alert('Km registrado com sucesso!');
       if (inputKm) inputKm.value = '';
+      if (changeEnable) changeEnable.checked = false;
+      if (changeFields) changeFields.style.display = 'none';
+      if (changeDateInput) changeDateInput.value = '';
+      if (changeDescInput) changeDescInput.value = '';
       if (msgEl) { msgEl.textContent = ''; }
 
       await carregarVeiculos();
