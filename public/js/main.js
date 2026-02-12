@@ -7,6 +7,9 @@ window.showToast = (msg = '') => {
   setTimeout(() => el.classList.remove('show'), 2200);
 };
 
+// Mensagem padrão para bloqueios de permissão no front-end.
+const MSG_ACESSO_NEGADO = 'Acesso negado. Contate o administrador do sistema!';
+
 // ===== Login =====
 (() => {
   const form = document.getElementById('login-form');
@@ -470,6 +473,31 @@ if (forgotPasswordLink && forgotPasswordModal) {
     }
   };
 
+  // Intercepta tentativas de apagar conteúdo em modo leitura (Backspace/Delete).
+  const bloquearDelecaoEmModoLeitura = (event) => {
+    if (!isCadastroReadOnly || !isPerfilLeitor()) return;
+
+    const isBeforeInputDelete =
+      event.type === 'beforeinput'
+      && (event.inputType === 'deleteContentBackward' || event.inputType === 'deleteContentForward');
+    const isKeyDelete =
+      event.type === 'keydown'
+      && (event.key === 'Backspace' || event.key === 'Delete');
+
+    if (!isBeforeInputDelete && !isKeyDelete) return;
+
+    event.preventDefault();
+    window.alert(MSG_ACESSO_NEGADO);
+  };
+
+  // Campos editáveis do cadastro ficam protegidos contra deleção no modo leitura.
+  form
+    .querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea')
+    .forEach((field) => {
+      field.addEventListener('beforeinput', bloquearDelecaoEmModoLeitura);
+      field.addEventListener('keydown', bloquearDelecaoEmModoLeitura);
+    });
+
   const searchInput = document.getElementById('veh-search');
   let termoBusca = '';
   const norm = (s) =>
@@ -565,7 +593,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       excluir.disabled = readOnlyMode;
       excluir.addEventListener('click', async () => {
         // Em modo leitura, bloqueia exclusão de foto existente.
-        if (readOnlyMode) return;
+        if (readOnlyMode && isPerfilLeitor()) {
+          window.alert(MSG_ACESSO_NEGADO);
+          return;
+        }
         if (!currentVeiculoId || !foto?.id) return;
         const confirmado = window.confirm('Deseja realmente excluir esse registro?');
         if (!confirmado) return;
@@ -610,7 +641,10 @@ if (forgotPasswordLink && forgotPasswordModal) {
       remover.disabled = readOnlyMode;
       remover.addEventListener('click', () => {
         // Em modo leitura, bloqueia remoção de novas imagens.
-        if (readOnlyMode) return;
+        if (readOnlyMode && isPerfilLeitor()) {
+          window.alert(MSG_ACESSO_NEGADO);
+          return;
+        }
         const [removido] = selected.splice(index, 1);
         if (removido?.previewUrl) URL.revokeObjectURL(removido.previewUrl);
         renderizar();
@@ -808,6 +842,11 @@ if (forgotPasswordLink && forgotPasswordModal) {
     // Excluir
     listContainer.querySelectorAll('button.delete').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        // Bloqueia exclusão para perfil LEITOR antes de qualquer confirmação/chamada API.
+        if (isPerfilLeitor()) {
+          window.alert(MSG_ACESSO_NEGADO);
+          return;
+        }
         const idx = Number(btn.getAttribute('data-index'));
         const v = veiculos[idx];
         if (!v) return;
@@ -1739,7 +1778,7 @@ if (userForm) {
     deleteButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
         if (perfilLogado !== 'ADMIN') {
-          window.alert('Acesso negado. Procure o administrador do sistema!');
+          window.alert(MSG_ACESSO_NEGADO);
           return;
         }
 
@@ -1776,7 +1815,7 @@ if (userForm) {
     editButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
         if (perfilLogado === 'LEITOR') {
-          window.alert('Acesso negado. Procure o administrador do sistema!');
+          window.alert(MSG_ACESSO_NEGADO);
           return;
         }
 
@@ -1816,7 +1855,7 @@ if (userForm) {
     e.preventDefault();
 
     if (perfilLogado === 'LEITOR') {
-      window.alert('Acesso negado. Procure o administrador do sistema!');
+      window.alert(MSG_ACESSO_NEGADO);
       return;
     }
 
@@ -1947,7 +1986,7 @@ if (userForm) {
   if (btnZerarSenha) {
     btnZerarSenha.addEventListener('click', async () => {
       if (perfilLogado !== 'ADMIN') {
-        window.alert('Acesso negado. Procure o administrador do sistema!');
+        window.alert(MSG_ACESSO_NEGADO);
         return;
       }
 
