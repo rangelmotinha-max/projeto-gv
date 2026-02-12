@@ -3,6 +3,14 @@ const path = require('path');
 const veiculoService = require('../services/veiculoService');
 const { getSession } = require('../middlewares/auth');
 
+
+const MSG_ACESSO_NEGADO_LEITOR = 'Acesso negado. Contate o administrador do sistema!';
+
+const isPerfilLeitor = (req) => {
+  const sessao = getSession(req);
+  return sessao?.perfil === 'LEITOR';
+};
+
 const validarPlacaBR = (placa) => {
   const p = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const reAntiga = /^[A-Z]{3}\d{4}$/; // ABC1234
@@ -51,6 +59,11 @@ async function listar(req, res, next) {
 
 async function criar(req, res, next) {
   try {
+    // Bloqueia operações de escrita para perfil somente leitura.
+    if (isPerfilLeitor(req)) {
+      return res.status(403).json({ message: MSG_ACESSO_NEGADO_LEITOR });
+    }
+
 
     let {
       marcaModelo,
@@ -135,6 +148,11 @@ async function criar(req, res, next) {
 
 async function atualizar(req, res, next) {
   try {
+    // Bloqueia operações de escrita para perfil somente leitura.
+    if (isPerfilLeitor(req)) {
+      return res.status(403).json({ message: MSG_ACESSO_NEGADO_LEITOR });
+    }
+
 
     const { id } = req.params;
     const payload = { ...req.body };
@@ -209,6 +227,11 @@ async function atualizar(req, res, next) {
 
 async function excluir(req, res, next) {
   try {
+    // Bloqueia operações de escrita para perfil somente leitura.
+    if (isPerfilLeitor(req)) {
+      return res.status(403).json({ message: MSG_ACESSO_NEGADO_LEITOR });
+    }
+
     const { id } = req.params;
     await veiculoService.excluir(id);
     res.status(204).send();
@@ -219,6 +242,11 @@ async function excluir(req, res, next) {
 
 async function excluirFoto(req, res, next) {
   try {
+    // Bloqueia operações de escrita para perfil somente leitura.
+    if (isPerfilLeitor(req)) {
+      return res.status(403).json({ message: MSG_ACESSO_NEGADO_LEITOR });
+    }
+
     const { id, fotoId } = req.params;
     const veiculoIdNum = Number(id);
     const fotoIdNum = Number(fotoId);
