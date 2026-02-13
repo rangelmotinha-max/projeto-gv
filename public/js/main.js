@@ -1587,9 +1587,15 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
               const showWarnKm = kmAtualNum !== null && kmRevNum !== null && (kmRevNum - kmAtualNum) <= 1000;
 
               // Verifica se a data de revisão já passou
-              const dataRevisao = v.dataProximaRevisao ? new Date(v.dataProximaRevisao) : null;
-              const dataAtual = new Date();
-              const showWarnData = dataRevisao !== null && dataAtual > dataRevisao;
+              let showWarnData = false;
+              if (v.dataProximaRevisao) {
+                const dataRevisao = new Date(v.dataProximaRevisao);
+                const dataAtual = new Date();
+                // Normaliza para início do dia para comparação precisa
+                dataRevisao.setHours(0, 0, 0, 0);
+                dataAtual.setHours(0, 0, 0, 0);
+                showWarnData = dataAtual > dataRevisao;
+              }
 
               // Mostra alerta se QUALQUER uma das condições for verdadeira
               const showWarn = showWarnKm || showWarnData;
