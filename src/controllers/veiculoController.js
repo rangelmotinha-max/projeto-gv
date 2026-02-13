@@ -3,6 +3,7 @@ const path = require('path');
 const veiculoService = require('../services/veiculoService');
 const { getSession } = require('../middlewares/auth');
 
+const { atualizarAlteracao, excluirAlteracao } = require('../services/veiculoService');
 
 const MSG_ACESSO_NEGADO_LEITOR = 'Acesso negado. Contate o administrador do sistema!';
 
@@ -56,6 +57,31 @@ async function listar(req, res, next) {
     next(e);
   }
 }
+  exports.atualizarAlteracao = async (req, res, next) => {
+    try {
+      const { id } = req.params; // vehicle id
+      const { changeId } = req.params; // alteration id
+      const { change_date, description } = req.body;
+      if (!change_date || !description) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes: change_date, description.' });
+      }
+      const updated = await atualizarAlteracao(id, changeId, change_date, description);
+      res.json({ success: true, alteracao: updated });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  exports.excluirAlteracao = async (req, res, next) => {
+    try {
+      const { id } = req.params; // vehicle id
+      const { changeId } = req.params; // alteration id
+      await excluirAlteracao(id, changeId);
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  };
 
 async function criar(req, res, next) {
   try {

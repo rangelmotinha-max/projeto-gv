@@ -507,6 +507,50 @@ async function criarAlteracao(veiculoId, changeDate, description, odometerEntryI
   return { id: res.insertId, vehicleId: Number(veiculoId), odometerEntryId: odometerEntryId || null, changeDate, description, userId: userId || null };
 }
 
+async function atualizarAlteracao(veiculoId, changeId, changeDate, description) {
+  const veiculoIdNum = Number(veiculoId);
+  const changeIdNum = Number(changeId);
+  if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0 || !Number.isInteger(changeIdNum) || changeIdNum <= 0) {
+    const err = new Error('Identificadores inválidos para veículo ou alteração.');
+    err.status = 400;
+    throw err;
+  }
+  const [rows] = await db.query(
+    'SELECT id FROM vehicle_changes WHERE id = ? AND vehicle_id = ? LIMIT 1',
+    [changeIdNum, veiculoIdNum]
+  );
+  if (!rows.length) {
+    const err = new Error('Alteração não encontrada para este veículo.');
+    err.status = 404;
+    throw err;
+  }
+  await db.execute(
+    'UPDATE vehicle_changes SET change_date = ?, description = ?, updated_at = datetime("now") WHERE id = ? AND vehicle_id = ?',
+    [changeDate, description, changeIdNum, veiculoIdNum]
+  );
+  return { id: changeIdNum, vehicleId: veiculoIdNum, changeDate, description };
+}
+
+async function excluirAlteracao(veiculoId, changeId) {
+  const veiculoIdNum = Number(veiculoId);
+  const changeIdNum = Number(changeId);
+  if (!Number.isInteger(veiculoIdNum) || veiculoIdNum <= 0 || !Number.isInteger(changeIdNum) || changeIdNum <= 0) {
+    const err = new Error('Identificadores inválidos para veículo ou alteração.');
+    err.status = 400;
+    throw err;
+  }
+  const [rows] = await db.query(
+    'SELECT id FROM vehicle_changes WHERE id = ? AND vehicle_id = ? LIMIT 1',
+    [changeIdNum, veiculoIdNum]
+  );
+  if (!rows.length) {
+    const err = new Error('Alteração não encontrada para este veículo.');
+    err.status = 404;
+    throw err;
+  }
+  await db.execute('DELETE FROM vehicle_changes WHERE id = ? AND vehicle_id = ?', [changeIdNum, veiculoIdNum]);
+}
+
 module.exports = {
   listar,
   criar,
@@ -524,4 +568,6 @@ module.exports = {
   listarLeiturasSaldo,
   listarAlteracoes,
   criarAlteracao,
+  atualizarAlteracao,
+  excluirAlteracao,
 };

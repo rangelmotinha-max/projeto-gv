@@ -45,5 +45,7 @@ router.put('/veiculos/:id/saldos/:saldoId', express.json(), veiculoController.at
 // Alterações de Veículo
 router.get('/veiculos/:id/alteracoes', veiculoController.listarAlteracoes);
 router.post('/veiculos/:id/alteracoes', express.json(), requireRoles(['ADMIN', 'EDITOR']), veiculoController.criarAlteracao);
+router.put('/veiculos/:id/alteracoes/:changeId', express.json(), requireRoles(['ADMIN', 'EDITOR']), veiculoController.atualizarAlteracao);
+router.delete('/veiculos/:id/alteracoes/:changeId', requireRoles(['ADMIN', 'EDITOR']), veiculoController.excluirAlteracao);
 
 module.exports = router;

@@ -793,11 +793,16 @@ if (forgotPasswordLink && forgotPasswordModal) {
       if (!rows.length) {
         changesList.innerHTML = '<p style="font-size:14px;color:#6c757d;">Sem alterações registradas.</p>';
       } else {
+        const podeEditar = !isPerfilLeitor();
         const linhas = rows.map(r => `
-          <tr>
+          <tr data-change-id="${r.id}">
             <td>${String(r.changeDate || '-')}</td>
             <td>${String(r.description || '').replace(/</g,'&lt;')}</td>
             <td>${String(r.userName || '-')}</td>
+            ${podeEditar ? `<td class="user-actions">
+              <button type="button" class="change-edit" data-id="${r.id}">Editar</button>
+              <button type="button" class="change-delete" data-id="${r.id}">Excluir</button>
+            </td>` : ''}
           </tr>
         `).join('');
         changesList.innerHTML = `
@@ -807,11 +812,73 @@ if (forgotPasswordLink && forgotPasswordModal) {
                 <th>Data da Alteração</th>
                 <th>Descrição</th>
                 <th>Usuário</th>
+                ${podeEditar ? '<th style="width:140px;">Ações</th>' : ''}
               </tr>
             </thead>
             <tbody>${linhas}</tbody>
           </table>
         `;
+        if (podeEditar) {
+          // Handler editar
+          changesList.querySelectorAll('button.change-edit').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const changeId = btn.getAttribute('data-id');
+              if (!changeId) return;
+              const row = btn.closest('tr');
+              const atualData = row ? row.children[0]?.textContent || '' : '';
+              const atualDesc = row ? row.children[1]?.textContent || '' : '';
+              const novaData = window.prompt('Informe nova data (YYYY-MM-DD HH:MM:SS):', atualData);
+              if (novaData === null) return; // cancelado
+              const novaDesc = window.prompt('Informe nova descrição:', atualDesc);
+              if (novaDesc === null) return;
+              const cd = String(novaData || '').trim();
+              const ds = String(novaDesc || '').trim();
+              if (!cd || !ds) {
+                window.alert('Preencha data e descrição.');
+                return;
+              }
+              try {
+                const resUp = await fetch(`/api/v1/veiculos/${veiculoId}/alteracoes/${changeId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ change_date: cd, description: ds }),
+                });
+                const data = await resUp.json().catch(() => null);
+                if (!resUp.ok) {
+                  window.alert(data?.message || 'Erro ao atualizar alteração.');
+                  return;
+                }
+                window.alert('Alteração atualizada com sucesso');
+                renderAlteracoes(veiculoId);
+              } catch (err) {
+                console.error(err);
+                window.alert('Falha ao comunicar com o servidor.');
+              }
+            });
+          });
+          // Handler excluir
+          changesList.querySelectorAll('button.change-delete').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const changeId = btn.getAttribute('data-id');
+              if (!changeId) return;
+              const confirmado = window.confirm('Deseja realmente excluir esse registro?');
+              if (!confirmado) return;
+              try {
+                const resDel = await fetch(`/api/v1/veiculos/${veiculoId}/alteracoes/${changeId}`, { method: 'DELETE' });
+                const data = await resDel.json().catch(() => null);
+                if (!resDel.ok) {
+                  window.alert(data?.message || 'Erro ao excluir alteração.');
+                  return;
+                }
+                window.alert('Alteração excluída com sucesso');
+                renderAlteracoes(veiculoId);
+              } catch (err) {
+                console.error(err);
+                window.alert('Falha ao comunicar com o servidor.');
+              }
+            });
+          });
+        }
       }
       changesSection.style.display = 'block';
       if (changeForm) {
