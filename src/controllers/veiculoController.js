@@ -483,3 +483,5 @@ async function criarAlteracao(req, res, next) {
 
 module.exports.listarAlteracoes = listarAlteracoes;
 module.exports.criarAlteracao = criarAlteracao;
+module.exports.atualizarAlteracao = exports.atualizarAlteracao;
+module.exports.excluirAlteracao = exports.excluirAlteracao;

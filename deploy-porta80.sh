@@ -54,30 +54,18 @@ fi
 echo ""
 echo "🚀 Iniciando servidor na porta $PORTA..."
 echo ""
+echo "=============================================="
+echo "  🌐 Acesse localmente: http://localhost:$PORTA"
+echo "  🌍 Acesse externamente: https://nabavoadora.xyz"
+echo "=============================================="
+echo ""
+echo "💡 Dicas:"
+echo "  - Para parar: Ctrl+C ou feche esta janela"
+echo "  - Limpar cache do navegador: Ctrl+Shift+Del"
+echo ""
+echo "📋 Logs do servidor:"
+echo "=============================================="
+echo ""
 
-# Inicia o servidor (porta 80 é padrão, não precisa especificar)
-npm start &
-SERVER_PID=$!
-
-# Aguarda alguns segundos
-sleep 3
-
-# Verifica se o servidor está rodando
-if ps -p $SERVER_PID > /dev/null 2>&1; then
-  echo ""
-  echo "✅ Servidor iniciado com sucesso!"
-  echo "=============================================="
-  echo "  🌐 Acesse: http://localhost:$PORTA"
-  echo "  🔑 PID do processo: $SERVER_PID"
-  echo "=============================================="
-  echo ""
-  echo "💡 Dicas:"
-  echo "  - Para parar: sudo kill $SERVER_PID"
-  echo "  - Logs em: terminal atual"
-  echo "  - Limpar cache do navegador: Ctrl+Shift+Del"
-  echo ""
-else
-  echo ""
-  echo "❌ Falha ao iniciar o servidor"
-  exit 1
-fi
+# Inicia o servidor em foreground para manter o processo rodando
+exec npm start
