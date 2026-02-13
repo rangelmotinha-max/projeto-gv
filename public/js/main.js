@@ -801,7 +801,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
             <td>${String(r.userName || '-')}</td>
             ${podeEditar ? `<td class="user-actions">
               <button type="button" class="change-edit" data-id="${r.id}">Editar</button>
-              <button type="button" class="change-delete" data-id="${r.id}">Excluir</button>
+              <button type="button" class="delete" data-id="${r.id}">Excluir</button>
             </td>` : ''}
           </tr>
         `).join('');
@@ -857,7 +857,7 @@ if (forgotPasswordLink && forgotPasswordModal) {
             });
           });
           // Handler excluir
-          changesList.querySelectorAll('button.change-delete').forEach((btn) => {
+          changesList.querySelectorAll('button.delete').forEach((btn) => {
             btn.addEventListener('click', async () => {
               const changeId = btn.getAttribute('data-id');
               if (!changeId) return;
