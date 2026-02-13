@@ -1582,7 +1582,18 @@ const apenasDigitos = (valor) => valor.replace(/\D/g, '');
                 status === 'BAIXADA' ? 'status-baixada' : status === 'OFICINA' ? 'status-oficina' : status === 'ATIVA' ? 'status-ativa' : 'status-base';
               const kmAtualNum = Number.isFinite(Number(v.kmAtual)) ? Number(v.kmAtual) : null;
               const kmRevNum = Number.isFinite(Number(v.proximaRevisaoKm)) ? Number(v.proximaRevisaoKm) : null;
-              const showWarn = kmAtualNum !== null && kmRevNum !== null && (kmRevNum - kmAtualNum) <= 1000;
+
+              // Verifica se o km está próximo (≤ 1000)
+              const showWarnKm = kmAtualNum !== null && kmRevNum !== null && (kmRevNum - kmAtualNum) <= 1000;
+
+              // Verifica se a data de revisão já passou
+              const dataRevisao = v.dataProximaRevisao ? new Date(v.dataProximaRevisao) : null;
+              const dataAtual = new Date();
+              const showWarnData = dataRevisao !== null && dataAtual > dataRevisao;
+
+              // Mostra alerta se QUALQUER uma das condições for verdadeira
+              const showWarn = showWarnKm || showWarnData;
+
               const warnHtml = showWarn
                 ? ' <span class="warn-icon" title="baixar vtr" aria-label="baixar vtr"><i class="fa-solid fa-triangle-exclamation"></i></span>'
                 : '';
